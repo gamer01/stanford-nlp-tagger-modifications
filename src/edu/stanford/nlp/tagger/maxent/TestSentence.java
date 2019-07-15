@@ -30,7 +30,6 @@ import edu.stanford.nlp.io.PrintFile;
 import edu.stanford.nlp.ling.*;
 import edu.stanford.nlp.ling.SentenceUtils;
 import edu.stanford.nlp.math.ArrayMath;
-import edu.stanford.nlp.math.SloppyMath;
 import edu.stanford.nlp.sequences.BestSequenceFinder;
 import edu.stanford.nlp.sequences.ExactBestSequenceFinder;
 import edu.stanford.nlp.sequences.SequenceModel;
@@ -61,7 +60,6 @@ public class TestSentence implements SequenceModel {
      */
     private static final Redwood.RedwoodChannels log = Redwood.channels(TestSentence.class);
 
-    protected final boolean VERBOSE;
     private static final String naTag = "NA";
     private static final String[] naTagArr = {naTag};
     protected static final boolean DBG = false;
@@ -99,11 +97,9 @@ public class TestSentence implements SequenceModel {
         if (maxentTagger.config != null) {
             tagSeparator = maxentTagger.config.getTagSeparator();
             encoding = maxentTagger.config.getEncoding();
-            VERBOSE = maxentTagger.config.getVerbose();
         } else {
             tagSeparator = TaggerConfig.getDefaultTagSeparator();
             encoding = "utf-8";
-            VERBOSE = false;
         }
         history = new History(pairs, maxentTagger.extractors);
     }
@@ -148,9 +144,6 @@ public class TestSentence implements SequenceModel {
             originalTags.add(Tagger.EOS_TAG);
         }
         size = sz + 1;
-        if (VERBOSE) {
-            log.info("Sentence: " + SentenceUtils.listToString(sent, false, tagSeparator));
-        }
         init();
         ArrayList<TaggedWord> result = testTagInference();
         if (maxentTagger.wordFunction != null) {
@@ -389,10 +382,6 @@ public class TestSentence implements SequenceModel {
     // This scores the current assignment in PairsHolder at
     // current position h.current (returns normalized scores)
     private double[] getScores(History h) {
-        return getExactScores(h);
-    }
-
-    private double[] getExactScores(History h) {
         double[] histories = getHistories(new String[]{}, h); // log score for each tag
         String[] tags = stringTagsAt(h.current - h.start + leftWindow());
         // tags is only used if we calculate approximate histories
@@ -404,14 +393,8 @@ public class TestSentence implements SequenceModel {
                 .mapToDouble(d -> d).toArray();
     }
 
-
-    // this is for the VERBOSE debugging code
-    private double[][] fullScores; // = null;
-
     /**
      * This computes scores of tags at a position in a sentence (the so called "History").
-     * Usually, it precomputes scores of local features (localScores).
-     * This is turned off if VERBOSE is set to make printing feature weights simpler....
      *
      * @param tags
      * @param h
@@ -422,53 +405,10 @@ public class TestSentence implements SequenceModel {
         Extractors ex = maxentTagger.extractors;
         Extractors exR = maxentTagger.extractorsRare;
         String w = pairs.getWord(h.current);
-        // if (DBG) { System.err.printf("%s: loc %s lc %s dy %s; rloc %s rlc %s rdy %s%n", w, ex.local, ex.localContext, ex.dynamic, exR.local, exR.localContext, exR.dynamic); }
-
-        if (VERBOSE) {
-            // Good options to print out what is calculated here are: -debug -verbose -verboseResults false -approximate false
-            int extractorsSize = rare ? ex.size() + exR.size() : ex.size();
-            fullScores = new double[extractorsSize][maxentTagger.ySize];
-
-            List<Pair<Integer, Extractor>> allEx = new ArrayList<>(ex.local);
-            allEx.addAll(ex.localContext);
-            allEx.addAll(ex.dynamic);
-            List<Pair<Integer, Extractor>> allExR = new ArrayList<>();
-            if (rare) {
-                allExR.addAll(exR.local);
-                allExR.addAll(exR.localContext);
-                allExR.addAll(exR.dynamic);
-            }
-
-            // = null;
-            ArrayList<String> extractorVals = new ArrayList<>();
-            for (int i = 0; i < extractorsSize; i++) {
-                extractorVals.add("foo");
-            }
-            for (Pair<Integer, Extractor> pair : allEx) {
-                int kf = pair.first();
-                Extractor e = pair.second();
-                String val = e.extract(h);
-                extractorVals.set(kf, e + " " + val);
-            }
-            for (Pair<Integer, Extractor> pair : allExR) {
-                int kf = pair.first();
-                Extractor e = pair.second();
-                String val = e.extract(h);
-                extractorVals.set(kf + ex.size(), e + " " + val);
-            }
-
-            double[] totalS = getHistories(tags, h, allEx, rare ? allExR : null);
-
-            NumberFormat nf = new DecimalFormat("0.00");
-            Object[] colNames = IntStream.range(0, maxentTagger.ySize).mapToObj(k -> maxentTagger.tags.getTag(k)).toArray();
-            System.err.println(ArrayMath.toString(fullScores, 6, extractorVals.toArray(), colNames,
-                    48, nf, false, true, w));
-            return totalS;
-        } // end if (VERBOSE) case
 
         double[] lS = localScores.get(w);
         if (lS == null) {
-            lS = getHistories(tags, h, ex.local, rare ? exR.local : null);
+            lS = getHistories(h, ex.local, rare ? exR.local : null);
             localScores.put(w, lS);
         } else if (lS.length != tags.length) {
             // This case can occur when a word was given a specific forced
@@ -476,35 +416,29 @@ public class TestSentence implements SequenceModel {
             // TODO: if a word is given a forced tag, we should always get
             // its features rather than use the cache, just in case the tag
             // given is not the same tag as before
-            lS = getHistories(tags, h, ex.local, rare ? exR.local : null);
+            lS = getHistories(h, ex.local, rare ? exR.local : null);
             if (tags.length > 1) {
                 localScores.put(w, lS);
             }
         }
         double[] lcS = localContextScores[h.current];
         if (lcS == null) {
-            lcS = getHistories(tags, h, ex.localContext, rare ? exR.localContext : null);
+            lcS = getHistories(h, ex.localContext, rare ? exR.localContext : null);
             localContextScores[h.current] = lcS;
             ArrayMath.pairwiseAddInPlace(lcS, lS);
         }
-        double[] totalS = getHistories(tags, h, ex.dynamic, rare ? exR.dynamic : null);
+        double[] totalS = getHistories(h, ex.dynamic, rare ? exR.dynamic : null);
         ArrayMath.pairwiseAddInPlace(totalS, lcS);
         return totalS;
     }
 
     /**
-     * @param tags           is ignored when calculating exact histories
      * @param h
      * @param extractors
      * @param extractorsRare
      * @return
      */
-    private double[] getHistories(String[] tags, History h, List<Pair<Integer, Extractor>> extractors, List<Pair<Integer, Extractor>> extractorsRare) {
-
-        return getExactHistories(h, extractors, extractorsRare);
-    }
-
-    private double[] getExactHistories(History h, List<Pair<Integer, Extractor>> extractors, List<Pair<Integer, Extractor>> extractorsRare) {
+    private double[] getHistories(History h, List<Pair<Integer, Extractor>> extractors, List<Pair<Integer, Extractor>> extractorsRare) {
         double[] scores = new double[maxentTagger.ySize];
         for (Pair<Integer, Extractor> e : extractors) {
             int kf = e.first();
@@ -516,9 +450,6 @@ public class TestSentence implements SequenceModel {
                     int fNum = fAssociations[j];
                     if (fNum > -1) {
                         double score = maxentTagger.getLambdaSolve().lambda[fNum];
-                        if (VERBOSE) {
-                            fullScores[kf][j] = score;
-                        }
                         scores[j] += score;
                     }
                 }
@@ -537,9 +468,6 @@ public class TestSentence implements SequenceModel {
                         int fNum = fAssociations[j];
                         if (fNum > -1) {
                             double score = maxentTagger.getLambdaSolve().lambda[fNum];
-                            if (VERBOSE) {
-                                fullScores[kf + szCommon][j] = score;
-                            }
                             scores[j] += score;
                         }
                     }
