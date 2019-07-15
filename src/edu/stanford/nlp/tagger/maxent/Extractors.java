@@ -33,7 +33,7 @@ public class Extractors implements Serializable  {
   /**
    * Set the extractors from an array.
    *
-   * @param extrs The array of extractors.  It is copied in this init.
+   * @param extrs The array of extractors.  It is copied in this updatePointers.
    */
   public Extractors(Extractor[] extrs) {
     v = new Extractor[extrs.length];
@@ -156,7 +156,7 @@ public class Extractors implements Serializable  {
       InDataStreamFile rf = new InDataStreamFile(filename);
       int len = rf.readInt();
       v = new Extractor[len];
-      //GlobalHolder.init();
+      //GlobalHolder.updatePointers();
     } catch (IOException e) {
       e.printStackTrace();
     }

@@ -26,7 +26,6 @@
 //http://www-nlp.stanford.edu/software/tagger.shtml
 
 
-
 package edu.stanford.nlp.tagger.maxent;
 
 
@@ -41,96 +40,66 @@ import java.util.List;
  */
 public class AmbiguityClass {
 
-  // private final HashSet<String> s;
-  private final List<Integer> sortedIds;
-  private final String key;
-  private final String word;
-  private final boolean single;
+    // private final HashSet<String> s;
+    private final List<Integer> sortedIds;
+    private final String key;
+    private final String word;
+    private final boolean single;
 
-  protected AmbiguityClass(String word, boolean single, Dictionary dict, TTags ttags) {
-    this.single = single;
-    if (single) {
-      this.word = word;
-      sortedIds = Collections.emptyList();
-    } else {
-      this.word = null;
-      String[] tags = dict.getTags(word);
-      sortedIds = new ArrayList<>(tags.length);
-      for (String tag : tags) {
-        add(ttags.getIndex(tag));
-      }
-      // s = Generics.newHashSet();
-      // for (Integer sortedId : sortedIds) {
-      //   s.add(ttags.getTag(sortedId));
-      // }
+    protected AmbiguityClass(String word, boolean single, Dictionary dict, TTags ttags) {
+        this.single = single;
+        if (single) {
+            this.word = word;
+            sortedIds = Collections.emptyList();
+        } else {
+            this.word = null;
+            String[] tags = dict.getTags(word);
+            sortedIds = new ArrayList<>(tags.length);
+            for (String tag : tags) {
+                add(ttags.getIndex(tag));
+            }
+        }
+        key = this.toString();
     }
-    key = this.toString();
-  }
 
-  public String getWord() {
-    return word;
-  }
-
-  /*
-  public boolean belongs(String word) {
-    String[] tags = GlobalHolder.dict.getTags(word);
-    if (tags.length != sortedIds.size()) {
-      return false;
+    public String getWord() {
+        return word;
     }
-    for (int i = 0; i < tags.length; i++) {
-      if (!s.contains(tags[i])) {
-        return false;
-      }
-    }
-    members++;
-    return true;
-  } // belongs
-  */
 
-  private boolean add(int tagId) {
-    for (int j = 0; j < sortedIds.size(); j++) {
-      if (tagId < sortedIds.get(j)) {
-        sortedIds.add(j, tagId);
+    private boolean add(int tagId) {
+        for (int j = 0; j < sortedIds.size(); j++) {
+            if (tagId < sortedIds.get(j)) {
+                sortedIds.add(j, tagId);
+                return true;
+            }
+            if (tagId == sortedIds.get(j)) {
+                return false;
+            }
+        }
+        sortedIds.add(tagId);
         return true;
-      }
-      if (tagId == sortedIds.get(j)) {
-        return false;
-      }
     }
-    sortedIds.add(tagId);
-    return true;
-  }
 
-  @Override
-  public String toString() {
-    if (single) {
-      return word;
+    @Override
+    public String toString() {
+        if (single) {
+            return word;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Integer sID : sortedIds) {
+            sb.append(':').append(sID.intValue());
+        }
+        return sb.toString();
     }
-    StringBuilder sb = new StringBuilder();
-    for (Integer sID : sortedIds) {
-      sb.append(':').append(sID.intValue());
+
+    @Override
+    public int hashCode() {
+        return key.hashCode();
     }
-    return sb.toString();
-  }
 
-  /*
-  public void print() {
-    //System.out.print(word + " ");
-    for (Integer sortedId : sortedIds) {
-      System.out.print(GlobalHolder.tags.getTag(sortedId.intValue()));
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof AmbiguityClass && key.equals(((AmbiguityClass) o).key);
     }
-    System.out.println();
-  }
-  */
-
-  @Override
-  public int hashCode() {
-    return key.hashCode();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    return o instanceof AmbiguityClass && key.equals(((AmbiguityClass) o).key);
-  }
 
 }

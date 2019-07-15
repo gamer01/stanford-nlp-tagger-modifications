@@ -1,4 +1,4 @@
-package edu.stanford.nlp.tagger.maxent; 
+package edu.stanford.nlp.tagger.maxent;
 
 import java.io.IOException;
 import java.util.List;
@@ -93,13 +93,11 @@ public class TestClassifier  {
       log.info("Sentence number: " + numSentences + "; length " + (testS.size-1) +
                          "; correct: " + testS.numRight + "; wrong: " + testS.numWrong +
                          "; unknown wrong: " + testS.numWrongUnknown);
-      // log.info("  Total tags correct: " + numRight + "; wrong: " + numWrong +
-      //                    "; unknown wrong: " + numWrongUnknown);
     }
   }
 
   /**
-   * Test on a file containing correct tags already. when init'ing from trees
+   * Test on a file containing correct tags already. when updatePointers'ing from trees
    * TODO: Add the ability to have a second transformer to transform output back; possibly combine this method
    * with method below
    */
@@ -191,7 +189,7 @@ public class TestClassifier  {
   static class TestSentenceProcessor implements ThreadsafeProcessor<List<TaggedWord>, TestSentence> {
     MaxentTagger maxentTagger;
 
-    public TestSentenceProcessor(MaxentTagger maxentTagger) {
+    TestSentenceProcessor(MaxentTagger maxentTagger) {
       this.maxentTagger = maxentTagger;
     }
 
@@ -209,5 +207,4 @@ public class TestClassifier  {
       return this;
     }
   }
-
 }

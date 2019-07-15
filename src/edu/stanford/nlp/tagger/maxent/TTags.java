@@ -54,20 +54,6 @@ public class TTags {
     isEnglish = false;
   }
 
-  /*
-  public TTags(TaggerConfig config) {
-    String[] closedArray = config.getClosedClassTags();
-    String[] openArray = config.getOpenClassTags();
-    if(closedArray.length > 0) {
-      closed = Generics.newHashSet(Arrays.asList(closedArray));
-    } else if(openArray.length > 0) {
-      openTags = Generics.newHashSet(Arrays.asList(openArray));
-    } else {
-      learnClosedTags = config.getLearnClosedClassTags();
-      closedTagThreshold = config.getClosedTagThreshold();
-    }
-  }
-  */
 
   TTags(String language) {
     if (language.equalsIgnoreCase("english")) {

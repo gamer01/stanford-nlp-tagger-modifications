@@ -37,8 +37,8 @@ public class TemplateHash  {
     return tempHash.get(p).getPositions();
   }
 
-  //public void init() {
-//    cdm 2008: stringNums isn't used anywhere, so we now don't do any init.
+  //public void updatePointers() {
+//    cdm 2008: stringNums isn't used anywhere, so we now don't do any updatePointers.
 //    int num = maxentTagger.extractors.getSize() + maxentTagger.extractorsRare.getSize();
 //    //log.info("A total of "+num+" features in TemplateHash");
 //    stringNums = new String[num];

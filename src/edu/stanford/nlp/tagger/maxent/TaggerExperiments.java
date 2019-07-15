@@ -470,7 +470,7 @@ public class TaggerExperiments extends Experiments  {
   public static void main(String[] args) {
     int[] hPos = {0, 1, 2, -1, -2};
     boolean[] isTag = {false, false, false, true, true};
-    maxentTagger.init();
+    maxentTagger.updatePointers();
     TaggerExperiments gophers = new TaggerExperiments("trainhuge.txt", null);
     //gophers.ptilde();
   }

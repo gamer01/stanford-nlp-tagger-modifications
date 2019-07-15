@@ -256,7 +256,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
 
   public MaxentTagger(TaggerConfig config) {
     // todo: maybe this shouldn't do this but replace the zero arg constructor.
-    // i.e., call init() not readModelAndInit(). This method is currently UNUSED. Make non-public.
+    // i.e., call updatePointers() not readModelAndInit(). This method is currently UNUSED. Make non-public.
     this(config.getModel(), config);
   }
 
@@ -466,7 +466,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
     return prob;
   }
 
-  // TODO: make these constructors instead of init methods?
+  // TODO: make these constructors instead of updatePointers methods?
   void init(TaggerConfig config) {
     if (initted) return;  // TODO: why not reinit?
 
@@ -567,9 +567,6 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
     return defaultScores[nDefault];
   }
 
-  boolean hasApproximateScoring() {
-    return defaultScore > 0.0;
-  }
 
   /**
    * Figures out what tokenizer factory might be described by the
@@ -860,7 +857,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
       if (config != null) {
         taggerConfig.setProperties(config);
       }
-      // then init tagger
+      // then updatePointers tagger
       init(taggerConfig);
 
       xSize = rf.readInt();
