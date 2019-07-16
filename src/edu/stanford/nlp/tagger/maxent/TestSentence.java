@@ -329,8 +329,6 @@ public class TestSentence implements SequenceModel {
         }
 
         BestSequenceFinder ti = new ExactBestSequenceFinder();
-        //new BeamBestSequenceFinder(50);
-        //new KBestSequenceFinder()
         int[] bestTags = ti.bestSequence(this);
         finalTags = new String[bestTags.length];
         for (int j = 0; j < size; j++) {
@@ -354,9 +352,12 @@ public class TestSentence implements SequenceModel {
 
         for (int j = current - left; j <= current + right; j++) {
             if (j < left) {
+
+                assert false;
                 continue;
             } //but shouldn't happen
             if (j >= size + left) {
+                assert false;
                 break;
             } //but shouldn't happen
             h.setTag(j - left, maxentTagger.tags.getTag(tags[j]));
@@ -441,175 +442,32 @@ public class TestSentence implements SequenceModel {
     private double[] getHistories(History h, List<Pair<Integer, Extractor>> extractors, List<Pair<Integer, Extractor>> extractorsRare) {
         double[] scores = new double[maxentTagger.ySize];
         for (Pair<Integer, Extractor> e : extractors) {
-            int kf = e.first();
-            Extractor ex = e.second();
-            String val = ex.extract(h);
-            int[] fAssociations = maxentTagger.fAssociations.get(kf).get(val);
-            if (fAssociations != null) {
-                for (int j = 0; j < maxentTagger.ySize; j++) {
-                    int fNum = fAssociations[j];
-                    if (fNum > -1) {
-                        double score = maxentTagger.getLambdaSolve().lambda[fNum];
-                        scores[j] += score;
-                    }
-                }
-            }
+            addScoresForExtractor(h, scores, 0, e.first(), e.second());
         }
         if (extractorsRare != null) {
             int szCommon = maxentTagger.extractors.size();  // needs to be full size list of extractors not subset of some type
             for (Pair<Integer, Extractor> e : extractorsRare) {
-                int kf = e.first();
-                Extractor ex = e.second();
-                String val = ex.extract(h);
-
-                int[] fAssociations = maxentTagger.fAssociations.get(kf + szCommon).get(val);
-                if (fAssociations != null) {
-                    for (int j = 0; j < maxentTagger.ySize; j++) {
-                        int fNum = fAssociations[j];
-                        if (fNum > -1) {
-                            double score = maxentTagger.getLambdaSolve().lambda[fNum];
-                            scores[j] += score;
-                        }
-                    }
-                }
+                addScoresForExtractor(h, scores, szCommon, e.first(), e.second());
             }
         }
         return scores;
     }
 
+    private void addScoresForExtractor(History h, double[] scores, int szCommon, int kf, Extractor ex) {
+        String val = ex.extract(h);
+        int[] fAssociations = maxentTagger.fAssociations.get(kf + szCommon).get(val);
 
-    /**
-     * This method should be called after the sentence has been tagged.
-     * For every unknown word, this method prints the 3 most probable tags
-     * to the file pfu.
-     *
-     * @param numSent The sentence number
-     * @param pfu     The file to print the probable tags to
-     */
-    void printUnknown(int numSent, PrintFile pfu) {
-        NumberFormat nf = new DecimalFormat("0.0000");
-        int numTags = maxentTagger.numTags();
-        double[][][] probabilities = new double[size][kBestSize][numTags];
-        calculateProbs(probabilities);
-        for (int current = 0; current < size; current++) {
-            if (maxentTagger.dict.isUnknown(sent.get(current))) {
-                pfu.print(sent.get(current));
-                pfu.print(':');
-                pfu.print(numSent);
-                double[] probs = new double[3];
-                String[] tag3 = new String[3];
-                getTop3(probabilities, current, probs, tag3);
-                for (int i = 0; i < 3; i++) {
-                    if (probs[i] > Double.NEGATIVE_INFINITY) {
-                        pfu.print('\t');
-                        pfu.print(tag3[i]);
-                        pfu.print(' ');
-                        pfu.print(nf.format(Math.exp(probs[i])));
-                    }
+        if (fAssociations != null) {
+            for (int j = 0; j < maxentTagger.ySize; j++) {
+                int fNum = fAssociations[j];
+                if (fNum > -1) {
+                    double score = maxentTagger.getLambdaSolve().lambda[fNum];
+                    scores[j] += score;
                 }
-                int rank;
-                String correctTag = toNice(this.correctTags[current]);
-                for (rank = 0; rank < 3; rank++) {
-                    if (correctTag.equals(tag3[rank])) {
-                        break;
-                    } //if
-                }
-                pfu.print('\t');
-                switch (rank) {
-                    case 0:
-                        pfu.print("Correct");
-                        break;
-                    case 1:
-                        pfu.print("2nd");
-                        break;
-                    case 2:
-                        pfu.print("3rd");
-                        break;
-                    default:
-                        pfu.print("Not top 3");
-                }
-                pfu.println();
-            }// if
-        }// for
-    }
-
-    // This method should be called after a sentence has been tagged.
-    // For every word token, this method prints the 3 most probable tags
-    // to the file pfu except for
-    void printTop(PrintFile pfu) {
-        NumberFormat nf = new DecimalFormat("0.0000");
-        int numTags = maxentTagger.numTags();
-        double[][][] probabilities = new double[size][kBestSize][numTags];
-        calculateProbs(probabilities);
-
-        for (int current = 0; current < correctTags.length; current++) {
-            pfu.print(sent.get(current));
-            double[] probs = new double[3];
-            String[] tag3 = new String[3];
-            getTop3(probabilities, current, probs, tag3);
-            for (int i = 0; i < 3; i++) {
-                if (probs[i] > Double.NEGATIVE_INFINITY) {
-                    pfu.print('\t');
-                    pfu.print(tag3[i]);
-                    pfu.print(' ');
-                    pfu.print(nf.format(Math.exp(probs[i])));
-                }
-            }
-            int rank;
-            String correctTag = toNice(this.correctTags[current]);
-            for (rank = 0; rank < 3; rank++) {
-                if (correctTag.equals(tag3[rank])) {
-                    break;
-                } //if
-            }
-            pfu.print('\t');
-            switch (rank) {
-                case 0:
-                    pfu.print("Correct");
-                    break;
-                case 1:
-                    pfu.print("2nd");
-                    break;
-                case 2:
-                    pfu.print("3rd");
-                    break;
-                default:
-                    pfu.print("Not top 3");
-            }
-            pfu.println();
-        } // for
-    }
-
-    /**
-     * probs and tags should be passed in as arrays of size 3!
-     * If probs[i] == Double.NEGATIVE_INFINITY, then the entry should be ignored.
-     */
-    private void getTop3(double[][][] probabilities, int current, double[] probs, String[] tags) {
-        int[] topIds = new int[3];
-        double[] probTags = probabilities[current][0];
-        Arrays.fill(probs, Double.NEGATIVE_INFINITY);
-        for (int i = 0; i < probTags.length; i++) {
-            if (probTags[i] > probs[0]) {
-                probs[2] = probs[1];
-                probs[1] = probs[0];
-                probs[0] = probTags[i];
-                topIds[2] = topIds[1];
-                topIds[1] = topIds[0];
-                topIds[0] = i;
-            } else if (probTags[i] > probs[1]) {
-                probs[2] = probs[1];
-                probs[1] = probTags[i];
-                topIds[2] = topIds[1];
-                topIds[1] = i;
-            } else if (probTags[i] > probs[2]) {
-                probs[2] = probTags[i];
-                topIds[2] = i;
             }
         }
-        for (int j = 0; j < 3; j++) {
-            tags[j] = toNice(maxentTagger.tags.getTag(topIds[j]));
-        }
     }
+
 
     /*
      * Implementation of the TagScorer interface follows
