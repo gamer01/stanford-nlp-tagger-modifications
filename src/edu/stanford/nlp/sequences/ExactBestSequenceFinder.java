@@ -54,25 +54,25 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
         }
 
         // Set up product space sizes
-        int[] productSizes = new int[padLength];
+        int[] productSizes = new int[length];
         int curProduct = Arrays.stream(tagNum).limit(leftWindow + rightWindow).reduce((x, y) -> x * y).getAsInt();
-        for (int pos = leftWindow + rightWindow; pos < padLength; pos++) {
-            curProduct *= tagNum[pos]; // shift on
-            productSizes[pos - rightWindow] = curProduct;
-            curProduct /= tagNum[pos - leftWindow - rightWindow]; // shift off
+        for (int pos = 0; pos < length; pos++) {
+            curProduct *= tagNum[pos + leftWindow + rightWindow]; // shift on
+            productSizes[pos] = curProduct;
+            curProduct /= tagNum[pos]; // shift off
         }
 
         // Score all of each window's options
         int[] currentTagSequence = new int[padLength];
         double[][] windowScore = new double[length][];
         for (int pos = leftWindow; pos < leftWindow + length; pos++) {
-            windowScore[pos-leftWindow] = new double[productSizes[pos]];
+            windowScore[pos - leftWindow] = new double[productSizes[pos - leftWindow]];
             Arrays.fill(currentTagSequence, tags[0][0]);
 
-            for (int product = 0; product < productSizes[pos]; product++) {
+            for (int product = 0; product < productSizes[pos - leftWindow]; product++) {
                 int p = product;
                 int shift = 1;
-                for (int curPos = pos + rightWindow; curPos > pos - leftWindow-1; curPos--) {
+                for (int curPos = pos + rightWindow; curPos > pos - leftWindow - 1; curPos--) {
                     currentTagSequence[curPos] = tags[curPos][p % tagNum[curPos]];
                     p /= tagNum[curPos];
                     if (curPos > pos) {
@@ -86,7 +86,7 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
                     double[] scores = ts.scoresOf(currentTagSequence, pos);
                     // fill in the relevant windowScores
                     for (int t = 0; t < tagNum[pos]; t++) {
-                        windowScore[pos-leftWindow][product + t * shift] = scores[t];
+                        windowScore[pos - leftWindow][product + t * shift] = scores[t];
                     }
                 }
             }
@@ -96,34 +96,34 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
         double[][] score = new double[length][];
         int[][] trace = new int[length][];
         for (int pos = 0; pos < length; pos++) {
-            score[pos] = new double[productSizes[pos+leftWindow]];
-            trace[pos] = new int[productSizes[pos+leftWindow]];
+            score[pos] = new double[productSizes[pos]];
+            trace[pos] = new int[productSizes[pos]];
         }
 
         // Do forward Viterbi algorithm
 
         // loop over the classification spot
-        for (int pos = leftWindow; pos < length + leftWindow; pos++) {
+        for (int pos = 0; pos < length; pos++) {
             // loop over window product types
             for (int product = 0; product < productSizes[pos]; product++) {
                 // check for initial spot
-                if (pos == leftWindow) {
+                if (pos == 0) {
                     // no predecessor type
-                    score[pos-leftWindow][product] = windowScore[pos-leftWindow][product];
-                    trace[pos-leftWindow][product] = -1;
+                    score[pos][product] = windowScore[pos][product];
+                    trace[pos][product] = -1;
                 } else {
                     // loop over possible predecessor types
-                    score[pos-leftWindow][product] = Double.NEGATIVE_INFINITY;
-                    trace[pos-leftWindow][product] = -1;
-                    int sharedProduct = product / tagNum[pos + rightWindow];
-                    int factor = productSizes[pos] / tagNum[pos + rightWindow];
-                    for (int newTagNum = 0; newTagNum < tagNum[pos - leftWindow - 1]; newTagNum++) {
+                    score[pos][product] = Double.NEGATIVE_INFINITY;
+                    trace[pos][product] = -1;
+                    int sharedProduct = product / tagNum[pos + leftWindow + rightWindow];
+                    int factor = productSizes[pos] / tagNum[pos + leftWindow + rightWindow];
+                    for (int newTagNum = 0; newTagNum < tagNum[pos - 1]; newTagNum++) {
                         int predProduct = newTagNum * factor + sharedProduct;
-                        double predScore = score[pos - 1-leftWindow][predProduct] + windowScore[pos-leftWindow][product];
+                        double predScore = score[pos - 1][predProduct] + windowScore[pos][product];
 
-                        if (predScore > score[pos-leftWindow][product]) {
-                            score[pos-leftWindow][product] = predScore;
-                            trace[pos-leftWindow][product] = predProduct;
+                        if (predScore > score[pos][product]) {
+                            score[pos][product] = predScore;
+                            trace[pos][product] = predProduct;
                         }
                     }
                 }
@@ -135,7 +135,7 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
         // most_likely_endstate = np.argmax(log_probs[:, -1])
         // max_prob, path = log_probs[most_likely_endstate, -1], deque([most_likely_endstate])
         int bestCurrentProduct = -1;
-        for (int product = 0; product < productSizes[leftWindow + length - 1]; product++) {
+        for (int product = 0; product < productSizes[length - 1]; product++) {
             if (score[length - 1][product] > bestFinalScore) {
                 bestCurrentProduct = product;
                 bestFinalScore = score[length - 1][product];
@@ -149,7 +149,7 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
         for (int pos = length - 2; pos >= 0; pos--) {
             int bestNextProduct = bestCurrentProduct;
             bestCurrentProduct = trace[pos + 1][bestNextProduct];
-            currentTagSequence[pos ] = tags[pos ][bestCurrentProduct / (productSizes[pos+leftWindow] / tagNum[pos])];
+            currentTagSequence[pos] = tags[pos][bestCurrentProduct / (productSizes[pos] / tagNum[pos])];
         }
         return new Pair<>(currentTagSequence, bestFinalScore);
     }
