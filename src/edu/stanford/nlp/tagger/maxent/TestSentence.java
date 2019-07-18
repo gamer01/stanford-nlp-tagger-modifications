@@ -341,23 +341,18 @@ public class TestSentence implements SequenceModel {
         cleanUpScorer();
     }
 
-
     // This is used for Dan's tag inference methods.
     // current is the actual word number + leftW
     private void setHistory(int current, History h, int[] tags) {
         //writes over the tags in the last thing in pairs
-
         int left = leftWindow();
         int right = rightWindow();
 
         for (int j = current - left; j <= current + right; j++) {
             if (j < left) {
-
-                assert false;
                 continue;
             } //but shouldn't happen
             if (j >= size + left) {
-                assert false;
                 break;
             } //but shouldn't happen
             h.setTag(j - left, maxentTagger.tags.getTag(tags[j]));
@@ -516,10 +511,6 @@ public class TestSentence implements SequenceModel {
 
     @Override
     public double[] scoresOf(int[] tags, int pos) {
-        if (DBG) {
-            log.info("scoresOf(): length of tags is " + tags.length + "; position is " + pos + "; endSizePairs = " + endSizePairs + "; size is " + size + "; leftWindow is " + leftWindow());
-            log.info("  History h = new History(" + (endSizePairs - size) + ", " + (endSizePairs - 1) + ", " + (endSizePairs - size + pos - leftWindow()) + ')');
-        }
         // updating the history variable
         history.updatePointers(endSizePairs - size, endSizePairs - 1, endSizePairs - size + pos - leftWindow());
         setHistory(pos, history, tags);
