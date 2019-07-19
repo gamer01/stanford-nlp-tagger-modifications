@@ -330,7 +330,7 @@ public class TestSentence implements SequenceModel {
 
         BestSequenceFinder ti = new ExactBestSequenceFinder();
         int[] bestTags = ti.bestSequence(this);
-        finalTags = new String[bestTags.length];
+        finalTags = new String[size];
         for (int j = 0; j < size; j++) {
             finalTags[j] = maxentTagger.tags.getTag(bestTags[j + leftWindow()]);
         }

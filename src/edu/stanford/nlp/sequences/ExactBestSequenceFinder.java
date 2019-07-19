@@ -94,37 +94,43 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
 
         // Set up score and backtrace arrays
         double[][] score = new double[length][];
-        int[][] trace = new int[length][];
+        int[][] trace = new int[length-1][];
         for (int pos = 0; pos < length; pos++) {
             score[pos] = new double[productSizes[pos]];
-            trace[pos] = new int[productSizes[pos]];
+            if (pos > 0){
+            trace[pos-1] = new int[productSizes[pos]];}
         }
 
         // Do forward Viterbi algorithm
 
         // loop over the classification spot
-        for (int pos = 0; pos < length; pos++) {
-            // loop over window product types
-            for (int product = 0; product < productSizes[pos]; product++) {
-                // check for initial spot
-                if (pos == 0) {
-                    // no predecessor type
-                    score[pos][product] = windowScore[pos][product];
-                    trace[pos][product] = -1;
-                } else {
-                    // loop over possible predecessor types
-                    score[pos][product] = Double.NEGATIVE_INFINITY;
-                    trace[pos][product] = -1;
-                    int sharedProduct = product / tagNum[pos + leftWindow + rightWindow];
-                    int factor = productSizes[pos] / tagNum[pos + leftWindow + rightWindow];
-                    for (int newTagNum = 0; newTagNum < tagNum[pos - 1]; newTagNum++) {
-                        int predProduct = newTagNum * factor + sharedProduct;
-                        double predScore = score[pos - 1][predProduct] + windowScore[pos][product];
 
-                        if (predScore > score[pos][product]) {
-                            score[pos][product] = predScore;
-                            trace[pos][product] = predProduct;
-                        }
+        // check for initial spot
+        for (int product = 0; product < productSizes[0]; product++) {
+            score[0][product] = windowScore[0][product];
+        }
+
+        // loop over the whole sentence
+        for (int pos = 1; pos < length; pos++) {
+            // loop over view windows
+            for (int product = 0; product < productSizes[pos]; product++) {
+                score[pos][product] = Double.NEGATIVE_INFINITY;
+                trace[pos-1][product] = -1;
+                int factor = productSizes[pos] / tagNum[pos + leftWindow + rightWindow];
+                int sharedProduct = product / tagNum[pos + leftWindow + rightWindow];
+
+                // calculate maximum
+                for (int newTagNum = 0; newTagNum < tagNum[pos - 1]; newTagNum++) {
+                    int predProduct = newTagNum * factor + sharedProduct;
+
+                    // this is actually the probability of the the state.
+                    // there is no transition probability considered, as there is no notion as transitions from one tag to another
+                    double predScore = score[pos - 1][predProduct] + windowScore[pos][product];
+
+                    if (predScore > score[pos][product]) {
+                        score[pos][product] = predScore;
+                        // this is the backpointer to the current state, therefore its correct if we incorporate the emission probability
+                        trace[pos-1][product] = predProduct;
                     }
                 }
             }
@@ -141,6 +147,7 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
                 bestFinalScore = score[length - 1][product];
             }
         }
+
         int lastProduct = bestCurrentProduct;
         for (int last = padLength - 1; last >= length - 1 && last >= 0; last--) {
             currentTagSequence[last] = tags[last][lastProduct % tagNum[last]];
@@ -148,7 +155,7 @@ public class ExactBestSequenceFinder implements BestSequenceFinder {
         }
         for (int pos = length - 2; pos >= 0; pos--) {
             int bestNextProduct = bestCurrentProduct;
-            bestCurrentProduct = trace[pos + 1][bestNextProduct];
+            bestCurrentProduct = trace[pos][bestNextProduct];
             currentTagSequence[pos] = tags[pos][bestCurrentProduct / (productSizes[pos] / tagNum[pos])];
         }
         return new Pair<>(currentTagSequence, bestFinalScore);
