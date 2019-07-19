@@ -1,7 +1,6 @@
 package edu.stanford.nlp.sequences
 
-import edu.stanford.nlp.util.Pair
-import edu.stanford.nlp.util.logging.Redwood
+
 import java.lang.Double.NEGATIVE_INFINITY
 
 
@@ -71,54 +70,43 @@ class ExactBestSequenceFinder : BestSequenceFinder {
         }
 
         // Set up score and backtrace arrays
-        val score = Array(length) { DoubleArray(productSizes[it]) }
+        val score = Array(length) { DoubleArray(productSizes[it]) { NEGATIVE_INFINITY } }
         val trace = Array(length - 1) { IntArray(productSizes[it + 1]) }
 
 
-        // Do forward Viterbi algorithm
-
+        // ############################
+        // DO FORWARD VITERBI ALGORITHM
+        // ############################
 
         // check for initial spot
         if (productSizes[0] >= 0) System.arraycopy(windowScore[0], 0, score[0], 0, productSizes[0])
-
 
         // loop over the classification spot (positions in sentence)
         for (pos in 1 until length) {
             // loop over view windows
             for (product in 0 until productSizes[pos]) {
-                score[pos][product] = NEGATIVE_INFINITY
-                trace[pos - 1][product] = -1
                 val factor = productSizes[pos] / tagNum[pos + leftWindow + rightWindow]
                 val sharedProduct = product / tagNum[pos + leftWindow + rightWindow]
 
                 // calculate maximum
-                for (newTagNum in 0 until tagNum[pos - 1]) {
-                    val predProduct = newTagNum * factor + sharedProduct
-
+                val (s, t) = (0 until tagNum[pos - 1]).map {
+                    val predProduct = it * factor + sharedProduct
                     // this is actually the probability of the the state.
                     // there is no transition probability considered, as there is no notion as transitions from one tag to another
                     val predScore = score[pos - 1][predProduct] + windowScore[pos][product]
+                    Pair(predScore, predProduct)
+                }.maxBy(Pair<Double, Int>::first)!!
 
-                    if (predScore > score[pos][product]) {
-                        score[pos][product] = predScore
-                        // this is the backpointer to the current state, therefore its correct if we incorporate the emission probability
-                        trace[pos - 1][product] = predProduct
-                    }
-                }
+                score[pos][product] = s
+                // this is the backpointer to the current state, therefore its correct if we incorporate the emission probability
+                trace[pos - 1][product] = t
             }
         }
 
         // Project the actual tag sequence
-        var bestFinalScore = java.lang.Double.NEGATIVE_INFINITY
-        // most_likely_endstate = np.argmax(log_probs[:, -1])
-        // max_prob, path = log_probs[most_likely_endstate, -1], deque([most_likely_endstate])
-        var bestCurrentProduct = -1
-        for (product in 0 until productSizes[length - 1]) {
-            if (score[length - 1][product] > bestFinalScore) {
-                bestCurrentProduct = product
-                bestFinalScore = score[length - 1][product]
-            }
-        }
+
+        // select the best window with respect to its score
+        var bestCurrentProduct = (0 until productSizes[length - 1]).maxBy { score[length - 1][it] }!!
 
         var lastProduct = bestCurrentProduct
         var last = padLength - 1
