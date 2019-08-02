@@ -9,3 +9,6 @@
 
 .idea/
 *.iml
+/target/
+/classes/
+/POS-test/

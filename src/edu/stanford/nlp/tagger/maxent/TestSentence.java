@@ -63,7 +63,6 @@ public class TestSentence implements SequenceModel {
     private static final String naTag = "NA";
     private static final String[] naTagArr = {naTag};
     protected static final boolean DBG = false;
-    private static final int kBestSize = 1;
 
     protected final String tagSeparator;
     protected final String encoding;
@@ -213,38 +212,32 @@ public class TestSentence implements SequenceModel {
      */
     private void calculateProbs(double[][][] probabilities) {
         ArrayUtils.fill(probabilities, Double.NEGATIVE_INFINITY);
-        for (int hyp = 0; hyp < kBestSize; hyp++) {
-            // put the whole thing in pairs, give its beginning and end
-            pairs.setSize(size);
-            for (int i = 0; i < size; i++) {
-                pairs.setWord(i, sent.get(i));
-                pairs.setTag(i, finalTags[i]);
-                //pairs.add(new WordTag(sent.get(i),finalTags[i]));
-                // TODO: if kBestSize > 1, use KBestSequenceFinder and save
-                // k-best hypotheses into finalTags:
-                //pairs.setTag(i,finalTags[i]);
-            }
-            int start = endSizePairs;
-            int end = endSizePairs + size - 1;
-            endSizePairs = endSizePairs + size;
-            // iterate over the sentence
-            for (int current = 0; current < size; current++) {
-                History h = new History(start, end, current + start, pairs, maxentTagger.extractors);
-                String[] tags = stringTagsAt(h.current - h.start + leftWindow());
-                // tags is only used if we calculate approximate histories
-                double[] probs = getHistories(tags, h);
-                ArrayMath.logNormalize(probs);
+        // put the whole thing in pairs, give its beginning and end
+        pairs.setSize(size);
+        for (int i = 0; i < size; i++) {
+            pairs.setWord(i, sent.get(i));
+            pairs.setTag(i, finalTags[i]);
+        }
+        int start = endSizePairs;
+        int end = endSizePairs + size - 1;
+        endSizePairs = endSizePairs + size;
+        // iterate over the sentence
+        for (int current = 0; current < size; current++) {
+            History h = new History(start, end, current + start, pairs, maxentTagger.extractors);
+            String[] tags = stringTagsAt(h.current - h.start + leftWindow());
+            // tags is only used if we calculate approximate histories
+            double[] probs = getHistories(tags, h);
+            ArrayMath.logNormalize(probs);
 
-                for (int j = 0; j < tags.length; j++) {
-                    // score the j-th tag
-                    String tag = tags[j];
-                    boolean approximate = false; // Stefan: this is simplified as this code was never called in my usecase
-                    int tagindex = approximate ? maxentTagger.tags.getIndex(tag) : j;
-                    // log.info("Mapped from j="+ j + " " + tag + " to " + tagindex);
-                    probabilities[current][hyp][tagindex] = probs[j];
-                }
-            } // for current
-        } // for hyp
+            for (int j = 0; j < tags.length; j++) {
+                // score the j-th tag
+                String tag = tags[j];
+                boolean approximate = false; // Stefan: this is simplified as this code was never called in my usecase
+                int tagindex = approximate ? maxentTagger.tags.getIndex(tag) : j;
+                // log.info("Mapped from j="+ j + " " + tag + " to " + tagindex);
+                probabilities[current][0][tagindex] = probs[j];
+            }
+        } // for current
         // clean up the stuff in PairsHolder (added by cdm in Aug 2008)
         revert(0);
     } // end calculateProbs()
