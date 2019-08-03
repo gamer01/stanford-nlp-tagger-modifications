@@ -67,7 +67,7 @@ class TestClassifier @Throws(IOException::class)
         } else {
             for (taggedSentence in fileRecord.reader()) {
                 // TODO: Change to other tagger
-                val testS = BaseTagger(maxentTagger)
+                val testS = BaseSetTagger(maxentTagger)
                 testS.setCorrectTags(taggedSentence)
                 testS.tagSentence(taggedSentence, false)
                 processResults(testS, pf, verboseResults)

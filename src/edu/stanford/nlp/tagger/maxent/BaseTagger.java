@@ -55,10 +55,10 @@ public class BaseTagger implements SequenceModel {
     /**
      * A logger for this class
      */
-    private static final Redwood.RedwoodChannels log = Redwood.channels(BaseTagger.class);
+    protected static final Redwood.RedwoodChannels log = Redwood.channels(BaseTagger.class);
 
-    private static final String naTag = "NA";
-    private static final String[] naTagArr = {naTag};
+    protected static final String naTag = "EMPTY";
+    protected static final String[] naTagArr = {naTag};
     protected static final boolean DBG = false;
 
     protected final String tagSeparator;
@@ -72,19 +72,18 @@ public class BaseTagger implements SequenceModel {
     private List<HasWord> origWords;
     protected int size; // TODO this always has the value of sent.size(). Remove it? [cdm 2008]
     // protected double[][][] probabilities;
-    private String[] correctTags;
+    protected String[] correctTags;
     String[] finalTags;
     int numRight;
     int numWrong;
     int numUnknown;
     int numWrongUnknown;
-    private int endSizePairs; // = 0;
 
     private volatile History history;
     private volatile Map<String, double[]> localScores = Generics.newHashMap();
     private volatile double[][] localContextScores;
 
-    private final MaxentTagger maxentTagger;
+    protected final MaxentTagger maxentTagger;
 
     public BaseTagger(MaxentTagger maxentTagger) {
         assert (maxentTagger != null);
@@ -144,11 +143,6 @@ public class BaseTagger implements SequenceModel {
             }
         }
         return result;
-    }
-
-
-    protected void revert() {
-        endSizePairs = 0;
     }
 
     protected void init() {
@@ -251,11 +245,10 @@ public class BaseTagger implements SequenceModel {
     }
 
     private void runTagInference() {
-        this.initializeScorer();
+        initializeScorer();
         BestSequenceFinder ti = new ExactBestSequenceFinder();
         finalTags = Arrays.stream(ti.bestSequence(this)).boxed()
                 .map(i -> maxentTagger.tags.getTag(i)).toArray(String[]::new);
-        revert();
     }
 
     // This is used for Dan's tag inference methods.
@@ -277,11 +270,10 @@ public class BaseTagger implements SequenceModel {
     }
 
     // do initializations for the TagScorer interface
-    private void initializeScorer() {
+    protected void initializeScorer() {
         pairs.setSize(size);
         for (int i = 0; i < size; i++)
             pairs.setWord(i, sent.get(i));
-        endSizePairs = size;
     }
 
     // This scores the current assignment in PairsHolder at
@@ -421,7 +413,7 @@ public class BaseTagger implements SequenceModel {
     @Override
     public double[] scoresOf(int[] tags, int pos) {
         // updating the history variable
-        history.updatePointers(endSizePairs - size, endSizePairs - 1, endSizePairs - size + pos - leftWindow());
+        history.updatePointers(0, size - 1, pos - leftWindow());
         setHistory(pos, history, tags);
 
         // calculating scores with respect to the history
