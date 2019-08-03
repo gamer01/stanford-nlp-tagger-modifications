@@ -35,6 +35,7 @@ import edu.stanford.nlp.sequences.SequenceModel;
 import edu.stanford.nlp.tagger.common.Tagger;
 import edu.stanford.nlp.util.*;
 import edu.stanford.nlp.util.logging.Redwood;
+import org.jetbrains.annotations.Contract;
 
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -100,11 +101,7 @@ public class TestSentence implements SequenceModel {
     }
 
     void setCorrectTags(List<? extends HasTag> sentence) {
-        int len = sentence.size();
-        correctTags = new String[len];
-        for (int i = 0; i < len; i++) {
-            correctTags[i] = sentence.get(i).tag();
-        }
+        correctTags = sentence.stream().map(HasTag::tag).toArray(String[]::new);
     }
 
     /**
@@ -150,8 +147,8 @@ public class TestSentence implements SequenceModel {
     }
 
 
-    protected void revert(int prevSize) {
-        endSizePairs = prevSize;
+    protected void revert() {
+        endSizePairs = 0;
     }
 
     protected void init() {
@@ -162,21 +159,6 @@ public class TestSentence implements SequenceModel {
                 numUnknown++;
             }
         }
-    }
-
-    /**
-     * Returns a string representation of the sentence.
-     *
-     * @return tagged sentence
-     */
-    String getTaggedNice() {
-        StringBuilder sb = new StringBuilder();
-        // size - 1 means to exclude the EOS (end of string) symbol
-        for (int i = 0; i < size - 1; i++) {
-            sb.append(toNice(sent.get(i))).append(tagSeparator).append(toNice(finalTags[i]));
-            sb.append(' ');
-        }
-        return sb.toString();
     }
 
 
@@ -197,46 +179,10 @@ public class TestSentence implements SequenceModel {
         return taggedSentence;
     }
 
+    @Contract(value = "!null -> !null", pure = true)
     static String toNice(String s) {
         return Objects.requireNonNullElse(s, naTag);
     }
-
-    /**
-     * calculateProbs puts log probs of taggings in the probabilities array.
-     *
-     * @param probabilities Array with indices sent size, k best size, numTags
-     */
-    private void calculateProbs(double[][][] probabilities) {
-        ArrayUtils.fill(probabilities, Double.NEGATIVE_INFINITY);
-        // put the whole thing in pairs, give its beginning and end
-        pairs.setSize(size);
-        for (int i = 0; i < size; i++) {
-            pairs.setWord(i, sent.get(i));
-            pairs.setTag(i, finalTags[i]);
-        }
-        int start = endSizePairs;
-        int end = endSizePairs + size - 1;
-        endSizePairs = endSizePairs + size;
-        // iterate over the sentence
-        for (int current = 0; current < size; current++) {
-            History h = new History(start, end, current + start, pairs, maxentTagger.extractors);
-            String[] tags = stringTagsAt(h.current - h.start + leftWindow());
-            // tags is only used if we calculate approximate histories
-            double[] probs = getHistories(tags, h);
-            ArrayMath.logNormalize(probs);
-
-            for (int j = 0; j < tags.length; j++) {
-                // score the j-th tag
-                String tag = tags[j];
-                boolean approximate = false; // Stefan: this is simplified as this code was never called in my usecase
-                int tagindex = approximate ? maxentTagger.tags.getIndex(tag) : j;
-                // log.info("Mapped from j="+ j + " " + tag + " to " + tagindex);
-                probabilities[current][0][tagindex] = probs[j];
-            }
-        } // for current
-        // clean up the stuff in PairsHolder (added by cdm in Aug 2008)
-        revert(0);
-    } // end calculateProbs()
 
 
     /**
@@ -314,9 +260,9 @@ public class TestSentence implements SequenceModel {
     private void runTagInference() {
         this.initializeScorer();
         BestSequenceFinder ti = new ExactBestSequenceFinder();
-        finalTags = Arrays.stream(ti.bestSequence(this))
-                .boxed().map(i -> maxentTagger.tags.getTag(i)).toArray(String[]::new);
-        cleanUpScorer();
+        finalTags = Arrays.stream(ti.bestSequence(this)).boxed()
+                .map(i -> maxentTagger.tags.getTag(i)).toArray(String[]::new);
+        revert();
     }
 
     // This is used for Dan's tag inference methods.
@@ -342,15 +288,7 @@ public class TestSentence implements SequenceModel {
         pairs.setSize(size);
         for (int i = 0; i < size; i++)
             pairs.setWord(i, sent.get(i));
-        endSizePairs += size;
-    }
-
-
-    /**
-     * clean-up after the scorer
-     */
-    private void cleanUpScorer() {
-        revert(0);
+        endSizePairs = size;
     }
 
     // This scores the current assignment in PairsHolder at
