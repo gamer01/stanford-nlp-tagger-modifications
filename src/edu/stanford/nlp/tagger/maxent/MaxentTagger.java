@@ -1159,6 +1159,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
 
             Timing t = new Timing();
             TestClassifier testClassifier = new TestClassifier(tagger);
+            testClassifier.test();
             long millis = t.stop();
             printErrWordsPerSec(millis, testClassifier.getNumWords());
             testClassifier.printModelAndAccuracy(tagger);

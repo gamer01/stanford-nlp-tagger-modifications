@@ -29,6 +29,7 @@ package edu.stanford.nlp.tagger.maxent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
+
 import edu.stanford.nlp.util.Timing;
 import edu.stanford.nlp.util.StringUtils;
 
@@ -36,12 +37,12 @@ import edu.stanford.nlp.util.StringUtils;
  * First, this runs a tagger once to see what results it comes up with.
  * Then it runs the same tagger in two separate threads to make sure the results are the same.
  * The results are printed to stdout; the user is expected to verify they are as expected.
- *
+ * <p>
  * Normally you would run MaxentTagger with command line arguments such as:
- *
+ * <p>
  * -model ../data/tagger/my-left3words-distsim-wsj-0-18.tagger
  * -testFile ../data/tagger/test-wsj-19-21 -verboseResults false
- *
+ * <p>
  * If you provide the same arguments to this program, it will first
  * run the given tagger on the given test file once to establish the
  * "baseline" results.  It will then run the same tagger in more than
@@ -49,7 +50,7 @@ import edu.stanford.nlp.util.StringUtils;
  * the same if the MaxentTagger is re-entrant.  The number of threads
  * to be run can be specified with -numThreads; the default is
  * DEFAULT_NUM_THREADS.
- *
+ * <p>
  * You can also provide multiple models.  After performing that test
  * on model1, it will then run the same test file on model2, model3,
  * etc to establish baseline results for that tagger.  After that, it
@@ -58,9 +59,9 @@ import edu.stanford.nlp.util.StringUtils;
  * should not have clobbered any static state initialized by the first
  * tagger.  Thus, the results of the two simultaneous taggers should
  * be the same as the two taggers' baselines.
- *
+ * <p>
  * Example arguments for the more complicated test:
- *
+ * <p>
  * -model1 ../data/pos-tagger/newmodels/left3words-distsim-wsj-0-18.tagger
  * -model2 ../data/pos-tagger/newmodels/left3words-wsj-0-18.tagger
  * -testFile ../data/pos-tagger/training/english/test-wsj-19-21
@@ -69,183 +70,186 @@ import edu.stanford.nlp.util.StringUtils;
  * @author John Bauer
  */
 class TestThreadedTagger {
-  /**
-   * Default number of threads to launch in the first test.
-   * Can be specified with -numThreads.
-   */
-  static final int DEFAULT_NUM_THREADS = 2;
+    /**
+     * Default number of threads to launch in the first test.
+     * Can be specified with -numThreads.
+     */
+    static final int DEFAULT_NUM_THREADS = 2;
 
-  static final String THREAD_FLAG = "numThreads";
-
-
-  private TestThreadedTagger() {} // static methods
+    static final String THREAD_FLAG = "numThreads";
 
 
-  /**
-   * This internal class takes a config, a tagger, and a thread name.
-   * The "run" method then runs the given tagger on the data file
-   * specified in the config.
-   */
-  private static class TaggerThread extends Thread {
+    private TestThreadedTagger() {
+    } // static methods
 
-    private final MaxentTagger tagger;
-    private final String threadName;
 
-    private String resultsString = "";
-    public String getResultsString() { return resultsString; }
+    /**
+     * This internal class takes a config, a tagger, and a thread name.
+     * The "run" method then runs the given tagger on the data file
+     * specified in the config.
+     */
+    private static class TaggerThread extends Thread {
 
-    TaggerThread(MaxentTagger tagger, String name) {
-      this.tagger = tagger;
-      this.threadName = name;
+        private final MaxentTagger tagger;
+        private final String threadName;
+
+        private String resultsString = "";
+
+        String getResultsString() {
+            return resultsString;
+        }
+
+        TaggerThread(MaxentTagger tagger, String name) {
+            this.tagger = tagger;
+            this.threadName = name;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Timing t = new Timing();
+                TestClassifier testClassifier = new TestClassifier(tagger);
+                testClassifier.test();
+                long millis = t.stop();
+                System.out.println("Thread " + threadName + " took " + millis +
+                        " milliseconds to tag " + testClassifier.getNumWords() +
+                        " words.\n" + resultsString);
+                testClassifier.printModelAndAccuracy(tagger);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    } // end class TaggerThread
+
+    private static void compareResults(String results, String baseline) {
+        if (!results.equals(baseline)) {
+            throw new RuntimeException("Results different from expected baseline");
+        }
     }
 
-    @Override
-    public void run() {
-      try {
-        Timing t = new Timing();
-        TestClassifier testClassifier = new TestClassifier(tagger);
-        long millis = t.stop();
-        resultsString = testClassifier.resultsString(tagger);
-        System.out.println("Thread " + threadName + " took " + millis +
-                           " milliseconds to tag " + testClassifier.getNumWords() +
-                           " words.\n" + resultsString);
-      } catch(IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-  } // end class TaggerThread
-
-  public static void compareResults(String results, String baseline) {
-    if (!results.equals(baseline)) {
-      throw new RuntimeException("Results different from expected baseline");
-    }
-  }
-
-  public static void main(final String[] args)
-    throws ClassNotFoundException, IOException, InterruptedException
-  {
-    Properties props = StringUtils.argsToProperties(args);
-    runThreadedTest(props);
-  }
-
-  public static void runThreadedTest(Properties props)
-    throws ClassNotFoundException, IOException, InterruptedException
-  {
-    ArrayList<Properties> configs = new ArrayList<>();
-    ArrayList<MaxentTagger> taggers = new ArrayList<>();
-    int numThreads = DEFAULT_NUM_THREADS;
-
-    // let the user specify how many threads to run in the first test case
-    if (props.getProperty(THREAD_FLAG) != null) {
-      numThreads = Integer.valueOf(props.getProperty(THREAD_FLAG));
+    public static void main(final String[] args)
+            throws ClassNotFoundException, IOException, InterruptedException {
+        Properties props = StringUtils.argsToProperties(args);
+        runThreadedTest(props);
     }
 
-    // read in each of the taggers specified on the command line
-    System.out.println();
-    System.out.println("Loading taggers...");
-    System.out.println();
+    public static void runThreadedTest(Properties props)
+            throws ClassNotFoundException, IOException, InterruptedException {
+        ArrayList<Properties> configs = new ArrayList<>();
+        ArrayList<MaxentTagger> taggers = new ArrayList<>();
+        int numThreads = DEFAULT_NUM_THREADS;
 
-    if (props.getProperty("model") != null) {
-      configs.add(props);
-      taggers.add(new MaxentTagger(configs.get(0).getProperty("model"), configs.get(0)));
-    } else {
-      int taggerNum = 1;
-      String taggerName = "model" + taggerNum;
-      while (props.getProperty(taggerName) != null) {
-        Properties newProps = new Properties();
-        newProps.putAll(props);
-        newProps.setProperty("model", props.getProperty(taggerName));
-        configs.add(newProps);
-        taggers.add(new MaxentTagger(configs.get(taggerNum - 1).getProperty("model"),
-                                     configs.get(taggerNum - 1)));
+        // let the user specify how many threads to run in the first test case
+        if (props.getProperty(THREAD_FLAG) != null) {
+            numThreads = Integer.valueOf(props.getProperty(THREAD_FLAG));
+        }
 
-        ++taggerNum;
-        taggerName = "model" + taggerNum;
-      }
-    }
-
-    // no models at all => bad
-    if (taggers.isEmpty()) {
-      throw new IllegalArgumentException("Please specify at least one of " +
-                                         "-model or -model1");
-    }
-
-    System.out.println();
-    System.out.println("Running the baseline results for tagger 1");
-    System.out.println();
-
-    // run baseline results for the first tagger model
-    TaggerThread baselineThread =
-      new TaggerThread(taggers.get(0), "BaseResults-1");
-    baselineThread.start();
-    baselineThread.join();
-
-    ArrayList<String> baselineResults = new ArrayList<>();
-    baselineResults.add(baselineThread.getResultsString());
-
-    System.out.println();
-    System.out.println("Running " + numThreads + " threads of tagger 1");
-    System.out.println();
-
-    // run the first tagger in X separate threads at the same time
-    // at the end of this test, those X threads should produce the same results
-    ArrayList<TaggerThread> threads = new ArrayList<>();
-    for (int i = 0; i < numThreads; ++i) {
-      threads.add(new TaggerThread(taggers.get(0),
-                                   "Simultaneous-" + (i + 1)));
-    }
-    for (TaggerThread thread : threads) {
-      thread.start();
-    }
-    for (TaggerThread thread : threads) {
-      thread.join();
-      compareResults(thread.getResultsString(),
-                     baselineResults.get(0));
-    }
-
-    // if we have more than one model...
-    if (taggers.size() > 1) {
-      // first, produce baseline results for the other models
-      // do this one thread at a time so we know there are no
-      // thread-related screwups
-      // TODO: would iterables be cleaner?
-      for (int i = 1; i < taggers.size(); ++i) {
+        // read in each of the taggers specified on the command line
         System.out.println();
-        System.out.println("Running the baseline results for tagger " + (i + 1));
+        System.out.println("Loading taggers...");
         System.out.println();
 
-        baselineThread = new TaggerThread(taggers.get(i),
-                                          "BaseResults-" + (i + 1));
+        if (props.getProperty("model") != null) {
+            configs.add(props);
+            taggers.add(new MaxentTagger(configs.get(0).getProperty("model"), configs.get(0)));
+        } else {
+            int taggerNum = 1;
+            String taggerName = "model" + taggerNum;
+            while (props.getProperty(taggerName) != null) {
+                Properties newProps = new Properties();
+                newProps.putAll(props);
+                newProps.setProperty("model", props.getProperty(taggerName));
+                configs.add(newProps);
+                taggers.add(new MaxentTagger(configs.get(taggerNum - 1).getProperty("model"),
+                        configs.get(taggerNum - 1)));
+
+                ++taggerNum;
+                taggerName = "model" + taggerNum;
+            }
+        }
+
+        // no models at all => bad
+        if (taggers.isEmpty()) {
+            throw new IllegalArgumentException("Please specify at least one of " +
+                    "-model or -model1");
+        }
+
+        System.out.println();
+        System.out.println("Running the baseline results for tagger 1");
+        System.out.println();
+
+        // run baseline results for the first tagger model
+        TaggerThread baselineThread =
+                new TaggerThread(taggers.get(0), "BaseResults-1");
         baselineThread.start();
         baselineThread.join();
+
+        ArrayList<String> baselineResults = new ArrayList<>();
         baselineResults.add(baselineThread.getResultsString());
-      }
 
-      System.out.println();
-      System.out.println("Running " + taggers.size() +
-                         " threads of different taggers");
-      System.out.println();
+        System.out.println();
+        System.out.println("Running " + numThreads + " threads of tagger 1");
+        System.out.println();
 
-      // now, run the X models at the same time.  there used to be a
-      // whole bunch of static state in the tagger, which used to mean
-      // such a thing was not be possible to do.  now that should not
-      // be a problem any more
-      threads.clear();
-      for (int i = 0; i < taggers.size(); ++i) {
-        threads.add(new TaggerThread(taggers.get(i),
-                                     "DifferentTaggers-" + (i + 1)));
-      }
-      for (TaggerThread thread : threads) {
-        thread.start();
-      }
-      for (int i = 0; i < taggers.size(); ++i) {
-        TaggerThread thread = threads.get(i);
-        thread.join();
-        compareResults(thread.getResultsString(),
-                       baselineResults.get(i));
-      }
+        // run the first tagger in X separate threads at the same time
+        // at the end of this test, those X threads should produce the same results
+        ArrayList<TaggerThread> threads = new ArrayList<>();
+        for (int i = 0; i < numThreads; ++i) {
+            threads.add(new TaggerThread(taggers.get(0),
+                    "Simultaneous-" + (i + 1)));
+        }
+        for (TaggerThread thread : threads) {
+            thread.start();
+        }
+        for (TaggerThread thread : threads) {
+            thread.join();
+            compareResults(thread.getResultsString(),
+                    baselineResults.get(0));
+        }
+
+        // if we have more than one model...
+        if (taggers.size() > 1) {
+            // first, produce baseline results for the other models
+            // do this one thread at a time so we know there are no
+            // thread-related screwups
+            // TODO: would iterables be cleaner?
+            for (int i = 1; i < taggers.size(); ++i) {
+                System.out.println();
+                System.out.println("Running the baseline results for tagger " + (i + 1));
+                System.out.println();
+
+                baselineThread = new TaggerThread(taggers.get(i),
+                        "BaseResults-" + (i + 1));
+                baselineThread.start();
+                baselineThread.join();
+                baselineResults.add(baselineThread.getResultsString());
+            }
+
+            System.out.println();
+            System.out.println("Running " + taggers.size() +
+                    " threads of different taggers");
+            System.out.println();
+
+            // now, run the X models at the same time.  there used to be a
+            // whole bunch of static state in the tagger, which used to mean
+            // such a thing was not be possible to do.  now that should not
+            // be a problem any more
+            threads.clear();
+            for (int i = 0; i < taggers.size(); ++i) {
+                threads.add(new TaggerThread(taggers.get(i),
+                        "DifferentTaggers-" + (i + 1)));
+            }
+            for (TaggerThread thread : threads) {
+                thread.start();
+            }
+            for (int i = 0; i < taggers.size(); ++i) {
+                TaggerThread thread = threads.get(i);
+                thread.join();
+                compareResults(thread.getResultsString(),
+                        baselineResults.get(i));
+            }
+        }
+
+        System.out.println("Done!");
     }
-
-    System.out.println("Done!");
-  }
 }

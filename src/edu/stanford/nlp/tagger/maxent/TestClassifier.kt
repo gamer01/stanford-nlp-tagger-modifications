@@ -1,15 +1,14 @@
-package edu.stanford.nlp.tagger.maxent;
+package edu.stanford.nlp.tagger.maxent
 
-import java.io.IOException;
-import java.util.List;
+import java.io.IOException
 
-import edu.stanford.nlp.io.PrintFile;
-import edu.stanford.nlp.ling.TaggedWord;
-import edu.stanford.nlp.tagger.io.TaggedFileRecord;
-import edu.stanford.nlp.util.ConfusionMatrix;
-import edu.stanford.nlp.util.concurrent.MulticoreWrapper;
-import edu.stanford.nlp.util.concurrent.ThreadsafeProcessor;
-import edu.stanford.nlp.util.logging.Redwood;
+import edu.stanford.nlp.io.PrintFile
+import edu.stanford.nlp.ling.TaggedWord
+import edu.stanford.nlp.tagger.io.TaggedFileRecord
+import edu.stanford.nlp.util.ConfusionMatrix
+import edu.stanford.nlp.util.concurrent.MulticoreWrapper
+import edu.stanford.nlp.util.concurrent.ThreadsafeProcessor
+import edu.stanford.nlp.util.logging.Redwood
 
 /**
  * Tags data and can handle either data with gold-standard tags (computing
@@ -22,185 +21,128 @@ import edu.stanford.nlp.util.logging.Redwood;
 // spread some functionality into TestSentence and some into MaxentTagger
 // TODO: at the very least, it doesn't seem to make sense to make it
 // an object with state, rather than just some static methods
-public class TestClassifier {
+class TestClassifier @Throws(IOException::class)
+@JvmOverloads constructor(private val maxentTagger: MaxentTagger, testFile: String = maxentTagger.config.file) {
+    private var numRight: Int = 0
+    private var numWrong: Int = 0
+    val numWords: Int
+        get() = numRight + numWrong
 
-    /**
-     * A logger for this class
-     */
-    private static final Redwood.RedwoodChannels log = Redwood.channels(TestClassifier.class);
+    private var unknownWords: Int = 0
+    private var numWrongUnknown: Int = 0
+    private var numCorrectSentences: Int = 0
+    private var numSentences: Int = 0
 
-    private final TaggedFileRecord fileRecord;
-    private int numRight;
-    private int numWrong;
-    private int unknownWords;
-    private int numWrongUnknown;
-    private int numCorrectSentences;
-    private int numSentences;
+    private var confusionMatrix: ConfusionMatrix<String> = ConfusionMatrix()
+    private val config: TaggerConfig = maxentTagger.config
+    private var writeDebug: Boolean = config.debug
+    private val fileRecord = TaggedFileRecord.createRecord(config, testFile)
+    private var saveRoot: String = (config.debugPrefix ?: fileRecord.filename())!!
 
-    private ConfusionMatrix<String> confusionMatrix;
-
-    // TODO: only one boolean here instead of 4? They all use the same debug status.
-    private boolean writeUnknDict;
-    private boolean writeWords;
-    private boolean writeTopWords;
-    private boolean writeConfusionMatrix;
-
-    private MaxentTagger maxentTagger;
-    TaggerConfig config;
-    private String saveRoot;
-
-    public TestClassifier(MaxentTagger maxentTagger) throws IOException {
-        this(maxentTagger, maxentTagger.config.getFile());
-    }
-
-    public TestClassifier(MaxentTagger maxentTagger, String testFile) throws IOException {
-        this.maxentTagger = maxentTagger;
-        this.config = maxentTagger.config;
-        setDebug(config.getDebug());
-
-        fileRecord = TaggedFileRecord.createRecord(config, testFile);
-
-        saveRoot = config.getDebugPrefix();
-        if (saveRoot == null || saveRoot.isEmpty()) {
-            saveRoot = fileRecord.filename();
-        }
-
-        test();
-
-
-    }
-
-    private void processResults(BaseTagger testS,
-                                PrintFile unknDictFile,
-                                PrintFile topWordsFile, boolean verboseResults) {
-        numSentences++;
-
-        testS.writeTagsAndErrors(testS.finalTags, unknDictFile, verboseResults);
-        testS.updateConfusionMatrix(testS.finalTags, confusionMatrix);
-
-        numWrong = numWrong + testS.numWrong;
-        numRight = numRight + testS.numRight;
-        unknownWords = unknownWords + testS.numUnknown;
-        numWrongUnknown = numWrongUnknown + testS.numWrongUnknown;
-        if (testS.numWrong == 0) {
-            numCorrectSentences++;
-        }
-        if (verboseResults) {
-            log.info("Sentence number: " + numSentences + "; length " + (testS.size - 1) +
-                    "; correct: " + testS.numRight + "; wrong: " + testS.numWrong +
-                    "; unknown wrong: " + testS.numWrongUnknown);
-        }
-    }
 
     /**
      * Test on a file containing correct tags already. when updatePointers'ing from trees
      * TODO: Add the ability to have a second transformer to transform output back; possibly combine this method
      * with method below
      */
-    private void test() throws IOException {
-        numSentences = 0;
-        confusionMatrix = new ConfusionMatrix<>();
+    @Throws(IOException::class)
+    fun test() {
+        var pf: PrintFile? = null
+        if (writeDebug) pf = PrintFile("$saveRoot.test.debug")
 
-        PrintFile pf = null;
-        PrintFile pf1 = null;
-        PrintFile pf3 = null;
+        val verboseResults = config.verboseResults
 
-        if (writeWords) pf = new PrintFile(saveRoot + ".words");
-        if (writeUnknDict) pf1 = new PrintFile(saveRoot + ".un.dict");
-        if (writeTopWords) pf3 = new PrintFile(saveRoot + ".words.top");
-
-        boolean verboseResults = config.getVerboseResults();
-
-        if (config.getNThreads() != 1) {
-            MulticoreWrapper<List<TaggedWord>, BaseTagger> wrapper = new MulticoreWrapper<>(config.getNThreads(), new TestSentenceProcessor(maxentTagger));
-            for (List<TaggedWord> taggedSentence : fileRecord.reader()) {
-                wrapper.put(taggedSentence);
+        if (config.nThreads != 1) {
+            val wrapper = MulticoreWrapper(config.nThreads, TestSentenceProcessor(maxentTagger))
+            for (taggedSentence in fileRecord.reader()) {
+                wrapper.put(taggedSentence)
                 while (wrapper.peek()) {
-                    processResults(wrapper.poll(), pf1, pf3, verboseResults);
+                    processResults(wrapper.poll()!!, pf, verboseResults)
                 }
             }
-            wrapper.join();
+            wrapper.join()
             while (wrapper.peek()) {
-                processResults(wrapper.poll(), pf1, pf3, verboseResults);
+                processResults(wrapper.poll()!!, pf, verboseResults)
             }
         } else {
-            for (List<TaggedWord> taggedSentence : fileRecord.reader()) {
-                BaseTagger testS = new BaseTagger(maxentTagger);
-                testS.setCorrectTags(taggedSentence);
-                testS.tagSentence(taggedSentence, false);
-                processResults(testS, pf1, pf3, verboseResults);
+            for (taggedSentence in fileRecord.reader()) {
+                // TODO: Change to other tagger
+                val testS = BaseTagger(maxentTagger)
+                testS.setCorrectTags(taggedSentence)
+                testS.tagSentence(taggedSentence, false)
+                processResults(testS, pf, verboseResults)
             }
         }
 
-        if (pf != null) pf.close();
-        if (pf1 != null) pf1.close();
-        if (pf3 != null) pf3.close();
+        pf?.close()
     }
 
+    private fun processResults(testS: BaseTagger, debugFile: PrintFile?, verboseResults: Boolean) {
+        numSentences++
 
-    String resultsString(MaxentTagger maxentTagger) {
-        StringBuilder output = new StringBuilder();
+        testS.writeTagsAndErrors(debugFile, verboseResults)
+        testS.updateConfusionMatrix(confusionMatrix)
+
+        numWrong += testS.numWrong
+        numRight += testS.numRight
+        unknownWords += testS.numUnknown
+        numWrongUnknown += testS.numWrongUnknown
+        if (testS.numWrong == 0) {
+            numCorrectSentences++
+        }
+        if (verboseResults) {
+            log.info("Sentence number: $numSentences; length ${testS.size - 1}; " +
+                    "correct: ${testS.numRight}; wrong: ${testS.numWrong}; unknown wrong: ${testS.numWrongUnknown}")
+        }
+    }
+
+    private fun resultsString(maxentTagger: MaxentTagger): String {
+        val output = StringBuilder()
         output.append(String.format("Model %s has xSize=%d, ySize=%d, and numFeatures=%d.%n",
-                maxentTagger.config.getModel(),
+                maxentTagger.config.model,
                 maxentTagger.xSize,
                 maxentTagger.ySize,
-                maxentTagger.getLambdaSolve().lambda.length));
+                maxentTagger.lambdaSolve.lambda.size))
         output.append(String.format("Results on %d sentences and %d words, of which %d were unknown.%n",
-                numSentences, numRight + numWrong, unknownWords));
+                numSentences, numRight + numWrong, unknownWords))
         output.append(String.format("Total sentences right: %d (%f%%); wrong: %d (%f%%).%n",
                 numCorrectSentences, numCorrectSentences * 100.0 / numSentences,
                 numSentences - numCorrectSentences,
-                (numSentences - numCorrectSentences) * 100.0 / (numSentences)));
+                (numSentences - numCorrectSentences) * 100.0 / numSentences))
         output.append(String.format("Total tags right: %d (%f%%); wrong: %d (%f%%).%n",
                 numRight, numRight * 100.0 / (numRight + numWrong), numWrong,
-                numWrong * 100.0 / (numRight + numWrong)));
+                numWrong * 100.0 / (numRight + numWrong)))
 
         if (unknownWords > 0) {
             output.append(String.format("Unknown words right: %d (%f%%); wrong: %d (%f%%).%n",
-                    (unknownWords - numWrongUnknown),
-                    100.0 - (numWrongUnknown * 100.0 / unknownWords),
-                    numWrongUnknown, numWrongUnknown * 100.0 / unknownWords));
+                    unknownWords - numWrongUnknown,
+                    100.0 - numWrongUnknown * 100.0 / unknownWords,
+                    numWrongUnknown, numWrongUnknown * 100.0 / unknownWords))
         }
 
-        return output.toString();
+        return output.toString()
     }
 
-    void printModelAndAccuracy(MaxentTagger maxentTagger) {
+    fun printModelAndAccuracy(maxentTagger: MaxentTagger) {
         // print the output all at once so that multiple threads don't clobber each other's output
-        log.info(resultsString(maxentTagger));
+        log.info(resultsString(maxentTagger))
     }
 
-
-    int getNumWords() {
-        return numRight + numWrong;
-    }
-
-    void setDebug(boolean status) {
-        writeUnknDict = status;
-        writeWords = status;
-        writeTopWords = status;
-        writeConfusionMatrix = status;
-    }
-
-    static class TestSentenceProcessor implements ThreadsafeProcessor<List<TaggedWord>, BaseTagger> {
-        MaxentTagger maxentTagger;
-
-        TestSentenceProcessor(MaxentTagger maxentTagger) {
-            this.maxentTagger = maxentTagger;
+    internal class TestSentenceProcessor(private var maxentTagger: MaxentTagger) : ThreadsafeProcessor<List<TaggedWord>, BaseTagger> {
+        override fun process(taggedSentence: List<TaggedWord>): BaseTagger {
+            val testS = BaseTagger(maxentTagger)
+            testS.setCorrectTags(taggedSentence)
+            testS.tagSentence(taggedSentence, false)
+            return testS
         }
 
-        @Override
-        public BaseTagger process(List<TaggedWord> taggedSentence) {
-            BaseTagger testS = new BaseTagger(maxentTagger);
-            testS.setCorrectTags(taggedSentence);
-            testS.tagSentence(taggedSentence, false);
-            return testS;
-        }
-
-        @Override
-        public ThreadsafeProcessor<List<TaggedWord>, BaseTagger> newInstance() {
+        override fun newInstance(): ThreadsafeProcessor<List<TaggedWord>, BaseTagger> {
             // MaxentTagger is threadsafe
-            return this;
+            return this
         }
+    }
+
+    companion object {
+        private val log = Redwood.channels(TestClassifier::class.java)
     }
 }

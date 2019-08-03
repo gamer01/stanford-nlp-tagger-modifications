@@ -42,7 +42,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
@@ -186,11 +185,10 @@ public class BaseTagger implements SequenceModel {
      * Write the tagging and note any errors (if pf != null) and accumulate
      * global statistics.
      *
-     * @param finalTags Chosen tags for sentence
-     * @param pf        File to write tagged output to (can be null, then no output;
-     *                  at present it is non-null iff the debug property is set)
+     * @param pf File to write tagged output to (can be null, then no output;
+     *           at present it is non-null iff the debug property is set)
      */
-    void writeTagsAndErrors(String[] finalTags, PrintFile pf, boolean verboseResults) {
+    void writeTagsAndErrors(PrintFile pf, boolean verboseResults) {
         StringWriter sw = new StringWriter(200);
         for (int i = 0; i < correctTags.length; i++) {
             sw.write(toNice(sent.get(i)));
@@ -234,11 +232,9 @@ public class BaseTagger implements SequenceModel {
     /**
      * Update a confusion matrix with the errors from this sentence.
      *
-     * @param finalTags       Chosen tags for sentence
      * @param confusionMatrix Confusion matrix to write to
      */
-    void updateConfusionMatrix(String[] finalTags,
-                               ConfusionMatrix<String> confusionMatrix) {
+    void updateConfusionMatrix(ConfusionMatrix<String> confusionMatrix) {
         for (int i = 0; i < correctTags.length; i++)
             confusionMatrix.add(finalTags[i], correctTags[i]);
     }
