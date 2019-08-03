@@ -239,6 +239,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
      * the latest left3words tagger on the NLP machines, but can be
      * changed by setting the environment variable NLP_DATA_HOME.
      */
+
     public static final String BASE_TAGGER_HOME =
             "$NLP_DATA_HOME/data/pos-tagger/distrib";
     public static final String TAGGER_HOME =
@@ -984,8 +985,8 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
      */
     @Override
     public List<TaggedWord> apply(List<? extends HasWord> in) {
-        TestSentence testSentence = new TestSentence(this);
-        return testSentence.tagSentence(in, false);
+        BaseTagger baseTagger = new BaseTagger(this);
+        return baseTagger.tagSentence(in, false);
     }
 
 
@@ -1004,9 +1005,9 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
     public List<List<TaggedWord>> process(List<? extends List<? extends HasWord>> sentences) {
         List<List<TaggedWord>> taggedSentences = Generics.newArrayList();
 
-        TestSentence testSentence = new TestSentence(this);
+        BaseTagger baseTagger = new BaseTagger(this);
         for (List<? extends HasWord> sentence : sentences) {
-            taggedSentences.add(testSentence.tagSentence(sentence, false));
+            taggedSentences.add(baseTagger.tagSentence(sentence, false));
         }
         return taggedSentences;
     }
@@ -1021,8 +1022,8 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
      * @return tagged sentence
      */
     public List<TaggedWord> tagSentence(List<? extends HasWord> sentence) {
-        TestSentence testSentence = new TestSentence(this);
-        return testSentence.tagSentence(sentence, false);
+        BaseTagger baseTagger = new BaseTagger(this);
+        return baseTagger.tagSentence(sentence, false);
     }
 
     /**
@@ -1038,8 +1039,8 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
      */
     public List<TaggedWord> tagSentence(List<? extends HasWord> sentence,
                                         boolean reuseTags) {
-        TestSentence testSentence = new TestSentence(this);
-        return testSentence.tagSentence(sentence, reuseTags);
+        BaseTagger baseTagger = new BaseTagger(this);
+        return baseTagger.tagSentence(sentence, reuseTags);
     }
 
     /**

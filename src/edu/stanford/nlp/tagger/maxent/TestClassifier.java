@@ -70,7 +70,7 @@ public class TestClassifier {
 
     }
 
-    private void processResults(TestSentence testS,
+    private void processResults(BaseTagger testS,
                                 PrintFile unknDictFile,
                                 PrintFile topWordsFile, boolean verboseResults) {
         numSentences++;
@@ -112,7 +112,7 @@ public class TestClassifier {
         boolean verboseResults = config.getVerboseResults();
 
         if (config.getNThreads() != 1) {
-            MulticoreWrapper<List<TaggedWord>, TestSentence> wrapper = new MulticoreWrapper<>(config.getNThreads(), new TestSentenceProcessor(maxentTagger));
+            MulticoreWrapper<List<TaggedWord>, BaseTagger> wrapper = new MulticoreWrapper<>(config.getNThreads(), new TestSentenceProcessor(maxentTagger));
             for (List<TaggedWord> taggedSentence : fileRecord.reader()) {
                 wrapper.put(taggedSentence);
                 while (wrapper.peek()) {
@@ -125,7 +125,7 @@ public class TestClassifier {
             }
         } else {
             for (List<TaggedWord> taggedSentence : fileRecord.reader()) {
-                TestSentence testS = new TestSentence(maxentTagger);
+                BaseTagger testS = new BaseTagger(maxentTagger);
                 testS.setCorrectTags(taggedSentence);
                 testS.tagSentence(taggedSentence, false);
                 processResults(testS, pf1, pf3, verboseResults);
@@ -182,7 +182,7 @@ public class TestClassifier {
         writeConfusionMatrix = status;
     }
 
-    static class TestSentenceProcessor implements ThreadsafeProcessor<List<TaggedWord>, TestSentence> {
+    static class TestSentenceProcessor implements ThreadsafeProcessor<List<TaggedWord>, BaseTagger> {
         MaxentTagger maxentTagger;
 
         TestSentenceProcessor(MaxentTagger maxentTagger) {
@@ -190,15 +190,15 @@ public class TestClassifier {
         }
 
         @Override
-        public TestSentence process(List<TaggedWord> taggedSentence) {
-            TestSentence testS = new TestSentence(maxentTagger);
+        public BaseTagger process(List<TaggedWord> taggedSentence) {
+            BaseTagger testS = new BaseTagger(maxentTagger);
             testS.setCorrectTags(taggedSentence);
             testS.tagSentence(taggedSentence, false);
             return testS;
         }
 
         @Override
-        public ThreadsafeProcessor<List<TaggedWord>, TestSentence> newInstance() {
+        public ThreadsafeProcessor<List<TaggedWord>, BaseTagger> newInstance() {
             // MaxentTagger is threadsafe
             return this;
         }

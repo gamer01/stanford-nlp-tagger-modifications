@@ -1449,7 +1449,7 @@ class CtbPreDetector extends RareExtractor {
 
   @Override
   String extract(History h, PairsHolder pH) {
-    String s = TestSentence.toNice(pH.getWord(h, position));
+    String s = BaseTagger.toNice(pH.getWord(h, position));
 
     if ( ! s.isEmpty() && CtbDict.getTagPre(t1, s.substring(0, 1)).equals("1"))
       return "1:"+t1;
@@ -1480,7 +1480,7 @@ class CtbSufDetector extends RareExtractor {
 
   @Override
   String extract(History h, PairsHolder pH) {
-    String s=TestSentence.toNice(pH.getWord(h, position));
+    String s= BaseTagger.toNice(pH.getWord(h, position));
 
     if(!s.isEmpty() && CtbDict.getTagSuf(t1, s.substring(s.length()-1)).equals("1"))
       return "1:"+t1;
@@ -1550,7 +1550,7 @@ class ASBCunkDetector extends RareExtractor {
 
   @Override
   String extract(History h, PairsHolder pH) {
-    String s=TestSentence.toNice(pH.getWord(h,n1));
+    String s= BaseTagger.toNice(pH.getWord(h,n1));
 
     if (ASBCunkDict.getTag(t1, s).equals("1"))
       return "1:"+t1;
@@ -1576,7 +1576,7 @@ class CTBunkDictDetector extends RareExtractor {
 
   @Override
   String extract(History h, PairsHolder pH) {
-    String s=TestSentence.toNice(pH.getWord(h,n1));
+    String s= BaseTagger.toNice(pH.getWord(h,n1));
 
     if (CTBunkDict.getTag(t1, s).equals("1"))
       return "1:"+t1;

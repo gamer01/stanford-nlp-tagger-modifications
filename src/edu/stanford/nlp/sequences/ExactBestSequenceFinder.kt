@@ -28,6 +28,7 @@ class ExactBestSequenceFinder : BestSequenceFinder {
         val padLength = length + leftWindow + rightWindow
 
         // constraint to: only observed closed tags for the word IF word known ELSE all open tags
+        // contains integer code representing a specific tag
         val tags = Array<IntArray>(padLength) { ts.getPossibleValues(it) }
         val tagNum = IntArray(padLength) { tags[it].size }
 
@@ -49,7 +50,7 @@ class ExactBestSequenceFinder : BestSequenceFinder {
             for (product in 0 until productSizes[pos - leftWindow]) {
                 var p = product
                 var shift = 1
-                for (curPos in pos + rightWindow downTo pos - leftWindow - 1 + 1) {
+                for (curPos in pos + rightWindow downTo pos - leftWindow) {
                     currentTagSequence[curPos] = tags[curPos][p % tagNum[curPos]]
                     p /= tagNum[curPos]
                     if (curPos > pos) {

@@ -42,6 +42,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
@@ -50,12 +51,12 @@ import java.util.stream.Stream;
  * @author Michel Galley
  * @version 1.0
  */
-public class TestSentence implements SequenceModel {
+public class BaseTagger implements SequenceModel {
 
     /**
      * A logger for this class
      */
-    private static final Redwood.RedwoodChannels log = Redwood.channels(TestSentence.class);
+    private static final Redwood.RedwoodChannels log = Redwood.channels(BaseTagger.class);
 
     private static final String naTag = "NA";
     private static final String[] naTagArr = {naTag};
@@ -86,7 +87,7 @@ public class TestSentence implements SequenceModel {
 
     private final MaxentTagger maxentTagger;
 
-    public TestSentence(MaxentTagger maxentTagger) {
+    public BaseTagger(MaxentTagger maxentTagger) {
         assert (maxentTagger != null);
         assert (maxentTagger.getLambdaSolve() != null);
         this.maxentTagger = maxentTagger;
@@ -154,11 +155,7 @@ public class TestSentence implements SequenceModel {
     protected void init() {
         //the eos are assumed already there
         localContextScores = new double[size][];
-        for (int i = 0; i < size - 1; i++) {
-            if (maxentTagger.dict.isUnknown(sent.get(i))) {
-                numUnknown++;
-            }
-        }
+        numUnknown += sent.stream().filter(maxentTagger.dict::isUnknown).count();
     }
 
 
