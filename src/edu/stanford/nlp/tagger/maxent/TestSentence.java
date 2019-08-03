@@ -28,7 +28,6 @@ package edu.stanford.nlp.tagger.maxent;
 
 import edu.stanford.nlp.io.PrintFile;
 import edu.stanford.nlp.ling.*;
-import edu.stanford.nlp.ling.SentenceUtils;
 import edu.stanford.nlp.math.ArrayMath;
 import edu.stanford.nlp.sequences.BestSequenceFinder;
 import edu.stanford.nlp.sequences.ExactBestSequenceFinder;
@@ -42,9 +41,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
-import java.text.NumberFormat;
-import java.text.DecimalFormat;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
@@ -317,20 +313,9 @@ public class TestSentence implements SequenceModel {
 
     private void runTagInference() {
         this.initializeScorer();
-        if (Thread.interrupted()) {  // Allow interrupting
-            throw new RuntimeInterruptedException();
-        }
-
         BestSequenceFinder ti = new ExactBestSequenceFinder();
-        int[] bestTags = ti.bestSequence(this);
-        finalTags = new String[size];
-        for (int j = 0; j < size; j++) {
-            finalTags[j] = maxentTagger.tags.getTag(bestTags[j + leftWindow()]);
-        }
-
-        if (Thread.interrupted()) {  // Allow interrupting
-            throw new RuntimeInterruptedException();
-        }
+        finalTags = Arrays.stream(ti.bestSequence(this))
+                .boxed().map(i -> maxentTagger.tags.getTag(i)).toArray(String[]::new);
         cleanUpScorer();
     }
 

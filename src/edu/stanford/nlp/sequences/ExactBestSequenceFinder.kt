@@ -120,6 +120,6 @@ class ExactBestSequenceFinder : BestSequenceFinder {
             bestCurrentProduct = trace[pos][bestNextProduct]
             currentTagSequence[pos] = tags[pos][bestCurrentProduct / (productSizes[pos] / tagNum[pos])]
         }
-        return currentTagSequence
+        return currentTagSequence.copyOfRange(leftWindow, leftWindow + length)
     }
 }
