@@ -58,7 +58,7 @@ public class BaseTagger implements SequenceModel {
     protected static final Redwood.RedwoodChannels log = Redwood.channels(BaseTagger.class);
 
     protected static final String naTag = "EMPTY";
-    protected static final String[] naTagArr = {naTag};
+    private static final String[] naTagArr = {naTag};
     protected static final boolean DBG = false;
 
     protected final String tagSeparator;
@@ -71,15 +71,14 @@ public class BaseTagger implements SequenceModel {
     // with a list of strings, this will be null
     private List<HasWord> origWords;
     protected int size; // TODO this always has the value of sent.size(). Remove it? [cdm 2008]
-    // protected double[][][] probabilities;
-    protected String[] correctTags;
+    private String[] correctTags;
     String[] finalTags;
     int numRight;
     int numWrong;
     int numUnknown;
     int numWrongUnknown;
 
-    private volatile History history;
+    protected volatile History history;
     private volatile Map<String, double[]> localScores = Generics.newHashMap();
     private volatile double[][] localContextScores;
 
@@ -253,7 +252,7 @@ public class BaseTagger implements SequenceModel {
 
     // This is used for Dan's tag inference methods.
     // current is the actual word number + leftW
-    private void setHistory(int current, History h, int[] tags) {
+    protected void setHistory(int current, int[] tags) {
         //writes over the tags in the last thing in pairs
         int left = leftWindow();
         int right = rightWindow();
@@ -265,12 +264,12 @@ public class BaseTagger implements SequenceModel {
             if (j >= size + left) {
                 break;
             } //but shouldn't happen
-            h.setTag(j - left, maxentTagger.tags.getTag(tags[j]));
+            history.setTag(j - left, maxentTagger.tags.getTag(tags[j]));
         }
     }
 
     // do initializations for the TagScorer interface
-    protected void initializeScorer() {
+    private void initializeScorer() {
         pairs.setSize(size);
         for (int i = 0; i < size; i++)
             pairs.setWord(i, sent.get(i));
@@ -278,34 +277,37 @@ public class BaseTagger implements SequenceModel {
 
     // This scores the current assignment in PairsHolder at
     // current position h.current (returns normalized scores)
-    private double[] getScores(History h) {
-        double[] histories = getHistories(new String[]{}, h); // log score for each tag
-        String[] tags = stringTagsAt(h.current - h.start + leftWindow());
-        // tags is only used if we calculate approximate histories
-        ArrayMath.logNormalize(histories);
-        // assert Arrays.stream(histories).map(x-> Math.exp(x)).sum() == 1
-
+    private double[] getScores() {
+        String[] tags = getPossibleTagsAsString(history.current - history.start + leftWindow());
+        double[] histories = getAllScores();
         // now we pick out the single values for the specific tags.
         return Stream.of(tags).map(tag -> histories[maxentTagger.tags.getIndex(tag)])
                 .mapToDouble(d -> d).toArray();
     }
 
+    protected double[] getAllScores() {
+        double[] histories = getHistories(); // log score for each tag
+        // tags is only used if we calculate approximate histories
+        ArrayMath.logNormalize(histories);
+        // assert Arrays.stream(histories).map(x-> Math.exp(x)).sum() == 1
+        return histories;
+    }
+
     /**
      * This computes scores of tags at a position in a sentence (the so called "History").
      *
-     * @param tags
-     * @param h
      * @return
      */
-    private double[] getHistories(String[] tags, History h) {
-        boolean rare = maxentTagger.isRare(ExtractorFrames.cWord.extract(h));
+    private double[] getHistories() {
+        String[] tags = new String[]{};
+        boolean rare = maxentTagger.isRare(ExtractorFrames.cWord.extract(history));
         Extractors ex = maxentTagger.extractors;
         Extractors exR = maxentTagger.extractorsRare;
-        String w = pairs.getWord(h.current);
+        String w = pairs.getWord(history.current);
 
         double[] lS = localScores.get(w);
         if (lS == null) {
-            lS = getHistories(h, ex.local, rare ? exR.local : null);
+            lS = getHistories(ex.local, rare ? exR.local : null);
             localScores.put(w, lS);
         } else if (lS.length != tags.length) {
             // This case can occur when a word was given a specific forced
@@ -313,44 +315,40 @@ public class BaseTagger implements SequenceModel {
             // TODO: if a word is given a forced tag, we should always get
             // its features rather than use the cache, just in case the tag
             // given is not the same tag as before
-            lS = getHistories(h, ex.local, rare ? exR.local : null);
-            if (tags.length > 1) {
-                localScores.put(w, lS);
-            }
+            lS = getHistories(ex.local, rare ? exR.local : null);
         }
-        double[] lcS = localContextScores[h.current];
+        double[] lcS = localContextScores[history.current];
         if (lcS == null) {
-            lcS = getHistories(h, ex.localContext, rare ? exR.localContext : null);
-            localContextScores[h.current] = lcS;
+            lcS = getHistories(ex.localContext, rare ? exR.localContext : null);
+            localContextScores[history.current] = lcS;
             ArrayMath.pairwiseAddInPlace(lcS, lS);
         }
-        double[] totalS = getHistories(h, ex.dynamic, rare ? exR.dynamic : null);
+        double[] totalS = getHistories(ex.dynamic, rare ? exR.dynamic : null);
         ArrayMath.pairwiseAddInPlace(totalS, lcS);
         return totalS;
     }
 
     /**
-     * @param h
      * @param extractors
      * @param extractorsRare
      * @return
      */
-    private double[] getHistories(History h, List<Pair<Integer, Extractor>> extractors, List<Pair<Integer, Extractor>> extractorsRare) {
+    private double[] getHistories(List<Pair<Integer, Extractor>> extractors, List<Pair<Integer, Extractor>> extractorsRare) {
         double[] scores = new double[maxentTagger.ySize];
         for (Pair<Integer, Extractor> e : extractors) {
-            addScoresForExtractor(h, scores, 0, e.first(), e.second());
+            addScoresForExtractor(scores, 0, e.first(), e.second());
         }
         if (extractorsRare != null) {
             int szCommon = maxentTagger.extractors.size();  // needs to be full size list of extractors not subset of some type
             for (Pair<Integer, Extractor> e : extractorsRare) {
-                addScoresForExtractor(h, scores, szCommon, e.first(), e.second());
+                addScoresForExtractor(scores, szCommon, e.first(), e.second());
             }
         }
         return scores;
     }
 
-    private void addScoresForExtractor(History h, double[] scores, int szCommon, int kf, Extractor ex) {
-        String val = ex.extract(h);
+    private void addScoresForExtractor(double[] scores, int szCommon, int kf, Extractor ex) {
+        String val = ex.extract(history);
         int[] fAssociations = maxentTagger.fAssociations.get(kf + szCommon).get(val);
 
         if (fAssociations != null) {
@@ -387,7 +385,7 @@ public class BaseTagger implements SequenceModel {
 
     @Override
     public int[] getPossibleValues(int pos) {
-        return Stream.of(stringTagsAt(pos))
+        return Stream.of(getPossibleTagsAsString(pos))
                 .map(tag -> maxentTagger.tags.getIndex(tag))
                 .mapToInt(x -> x).toArray();
     }
@@ -411,17 +409,17 @@ public class BaseTagger implements SequenceModel {
     }
 
     @Override
-    public double[] scoresOf(int[] tags, int pos) {
+    public double[] scoresOf(int[] contextTags, int pos) {
         // updating the history variable
         history.updatePointers(0, size - 1, pos - leftWindow());
-        setHistory(pos, history, tags);
+        setHistory(pos, contextTags);
 
         // calculating scores with respect to the history
-        return getScores(history);
+        return getScores();
     }
 
     // todo [cdm 2013]: Tagging could be sped up quite a bit here if we cached int arrays of tags by index, not Strings
-    private String[] stringTagsAt(int pos) {
+    public String[] getPossibleTagsAsString(int pos) {
         pos -= leftWindow();
         // if word in padding part, return NA tag array
         if (!(0 <= pos && pos < size)) {

@@ -18,7 +18,7 @@ public class History {
     int current; // this is the index of the current word
     final PairsHolder pairs;
     // todo [cdm 2018]: Is extractors even needed or could it be eliminated??? It seems like it is used in tagger construction but it still confuses me since this only stores regular extractors not rareExtractors
-    final Extractors extractors;
+    private final Extractors extractors;
 
     History(PairsHolder pairs, Extractors extractors) {
         this.pairs = pairs;
