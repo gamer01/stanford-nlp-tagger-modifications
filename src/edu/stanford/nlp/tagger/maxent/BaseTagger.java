@@ -285,7 +285,7 @@ public class BaseTagger implements SequenceModel {
                 .mapToDouble(d -> d).toArray();
     }
 
-    protected double[] getAllScores() {
+    private double[] getAllScores() {
         double[] histories = getHistories(); // log score for each tag
         // tags is only used if we calculate approximate histories
         ArrayMath.logNormalize(histories);
@@ -295,8 +295,6 @@ public class BaseTagger implements SequenceModel {
 
     /**
      * This computes scores of tags at a position in a sentence (the so called "History").
-     *
-     * @return
      */
     private double[] getHistories() {
         String[] tags = new String[]{};
@@ -390,34 +388,6 @@ public class BaseTagger implements SequenceModel {
                 .mapToInt(x -> x).toArray();
     }
 
-    @Override
-    public double scoreOf(int[] tags, int pos) {
-        double[] scores = scoresOf(tags, pos);
-        double score = Double.NEGATIVE_INFINITY;
-        int[] pv = getPossibleValues(pos);
-        for (int i = 0; i < scores.length; i++) {
-            if (pv[i] == tags[pos]) {
-                score = scores[i];
-            }
-        }
-        return score;
-    }
-
-    @Override
-    public double scoreOf(int[] sequence) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public double[] scoresOf(int[] contextTags, int pos) {
-        // updating the history variable
-        history.updatePointers(0, size - 1, pos - leftWindow());
-        setHistory(pos, contextTags);
-
-        // calculating scores with respect to the history
-        return getScores();
-    }
-
     // todo [cdm 2013]: Tagging could be sped up quite a bit here if we cached int arrays of tags by index, not Strings
     public String[] getPossibleTagsAsString(int pos) {
         pos -= leftWindow();
@@ -443,5 +413,41 @@ public class BaseTagger implements SequenceModel {
         }
         // we expand the tags
         return maxentTagger.tags.deterministicallyExpandTags(arr1);
+    }
+
+    @Override
+    public double scoreOf(int[] tags, int pos) {
+        double[] scores = scoresOf(tags, pos);
+        double score = Double.NEGATIVE_INFINITY;
+        int[] pv = getPossibleValues(pos);
+        for (int i = 0; i < scores.length; i++) {
+            if (pv[i] == tags[pos]) {
+                score = scores[i];
+            }
+        }
+        return score;
+    }
+
+    @Override
+    public double scoreOf(int[] sequence) {
+        throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public double[] scoresOf(int[] contextTags, int pos) {
+        return scoresOf(contextTags, pos, true);
+    }
+
+    public double[] scoresOf(int[] contextTags, int pos, boolean constrainToPossibleTags) {
+        // updating the history variable
+        history.updatePointers(0, size - 1, pos - leftWindow());
+        setHistory(pos, contextTags);
+
+        if (constrainToPossibleTags) {
+            // calculating scores with respect to the history
+            return getScores();
+        }
+        return getAllScores();
     }
 }

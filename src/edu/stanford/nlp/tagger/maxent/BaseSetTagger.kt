@@ -7,7 +7,7 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
     internal override fun writeTagsAndErrors(pf: PrintFile?, verboseResults: Boolean) {
         super.writeTagsAndErrors(pf, verboseResults)
         // call ubop for the whole sequence
-        val finalTagSets = deriveTagSets(::genSingletons,false)
+        val finalTagSets = deriveTagSets(::genSingletons, false)
         println(finalTagSets.joinToString())
 
         //write stuff to csv
@@ -22,15 +22,14 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
 
         // skip end of sentence tag
         val result = (0 until size - 1).map { pos ->
-            // in each position we call UBOP to derive the set-valued prediction
+            // in each position we call the set-valued predictor
             if (constraintTags) {
                 val scores = scoresOf(sequence, pos + leftWindow())
                 val tags = getPossibleTagsAsString(pos + leftWindow())
                 setpredictor(scores, tags)
             } else {
-                history.updatePointers(0, size - 1, pos )
-                setHistory(pos+leftWindow(), sequence)
-                val scores = allScores
+                // similar to above, but we do not constraint the scores.
+                val scores = scoresOf(sequence, pos + leftWindow(), false)
                 val tags = maxentTagger.tags.tagSet().sortedBy { maxentTagger.tags.getIndex(it) }.toTypedArray()
                 setpredictor(scores, tags)
             }
@@ -41,6 +40,4 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
 
     private fun genSingletons(scores: DoubleArray, filteredTags: Array<String>) =
             setOf("${scores.size}:" + scores.indices.maxBy { scores[it] }?.let { filteredTags[it] })
-
-
 }
