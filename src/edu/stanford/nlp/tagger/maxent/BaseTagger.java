@@ -60,6 +60,7 @@ public class BaseTagger implements SequenceModel {
     protected static final String naTag = "EMPTY";
     private static final String[] naTagArr = {naTag};
     protected static final boolean DBG = false;
+    protected static final boolean doConstraintTagSet = false;
 
     protected final String tagSeparator;
     protected final String encoding;
@@ -71,7 +72,7 @@ public class BaseTagger implements SequenceModel {
     // with a list of strings, this will be null
     private List<HasWord> origWords;
     protected int size; // TODO this always has the value of sent.size(). Remove it? [cdm 2008]
-    private String[] correctTags;
+    protected String[] correctTags;
     String[] finalTags;
     int numRight;
     int numWrong;
@@ -394,6 +395,10 @@ public class BaseTagger implements SequenceModel {
         // if word in padding part, return NA tag array
         if (!(0 <= pos && pos < size)) {
             return naTagArr;
+        }
+
+        if (!doConstraintTagSet) {
+            return maxentTagger.tags.tagSet().toArray(new String[0]);
         }
 
         // reuse supplied tags. this means each word contains only one tag, which is the supplied one.

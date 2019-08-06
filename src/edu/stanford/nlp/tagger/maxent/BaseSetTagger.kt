@@ -1,17 +1,39 @@
 package edu.stanford.nlp.tagger.maxent
 
+import com.opencsv.CSVWriter
 import edu.stanford.nlp.io.PrintFile
+import java.io.FileWriter
 
 class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
+    companion object {
+        private var n_sent = 1
+    }
+
 
     internal override fun writeTagsAndErrors(pf: PrintFile?, verboseResults: Boolean) {
-        super.writeTagsAndErrors(pf, verboseResults)
+        super.writeTagsAndErrors(null, verboseResults)
         // call ubop for the whole sequence
-        val finalTagSets = deriveTagSets(::genSingletons, false)
-        println(finalTagSets.joinToString())
+        //val finalTagSets = deriveTagSets(::genSingletons, false)
+        //println(finalTagSets.joinToString())
+
+        if (pf == null)
+            return
 
         //write stuff to csv
+        val sequence = (List(leftWindow()) { naTag } + finalTags + List(rightWindow()) { naTag }).map { maxentTagger.tags.getIndex(it) }.toIntArray()
 
+        // skip end of sentence tag
+        for (pos in 0 until size - 1) {
+            //word; sentenceID; isunknown; truelabel; label posterior; constrained tags;
+            val word = sent[pos]
+            val data = arrayOf(word, n_sent.toString(), maxentTagger.dict.isUnknown(word).toString(),
+                    correctTags[pos], finalTags[pos],
+                    scoresOf(sequence, pos + leftWindow(), false).joinToString(prefix = "[", postfix = "]"),
+                    getPossibleTagsAsString(pos + leftWindow()).joinToString(prefix = "[", postfix = "]"))
+            pf.println(data.joinToString(separator = ";", transform= { "\"$it\"" }) )
+        }
+
+        n_sent++
     }
 
     private fun deriveTagSets(setpredictor: (scores: DoubleArray, tags: Array<String>) -> Set<String> = ::genSingletons,
