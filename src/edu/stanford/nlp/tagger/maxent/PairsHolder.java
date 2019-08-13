@@ -32,7 +32,7 @@ public class PairsHolder {
     // todo: This method seems crazy.  Can't we either just do nothing or using ensureCapacity()?
     public void setSize(int s) {
         while (arr.size() < s) {
-            arr.add(new WordTag(null, "NN"));  // todo: remove NN.  NA okay?
+            arr.add(new WordTag(null, Defaults.naTag));
         }
     }
 
@@ -73,12 +73,12 @@ public class PairsHolder {
      */
     String getWord(History h, int position) {
         final int p = h.current + position;
-        return (p >= h.start && p <= h.end) ? arr.get(p).word() : "NA";
+        return (p >= h.start && p <= h.end) ? arr.get(p).word() : Defaults.naTag;
     }
 
     String getTag(History h, int position) {
         final int p = h.current + position;
-        return (p >= h.start && p <= h.end) ? arr.get(p).tag() : "NA";
+        return (p >= h.start && p <= h.end) ? arr.get(p).tag() : Defaults.naTag;
     }
 
     @Override

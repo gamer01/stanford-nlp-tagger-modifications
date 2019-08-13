@@ -37,7 +37,7 @@ class TestClassifier @Throws(IOException::class)
     private val config: TaggerConfig = maxentTagger.config
     private var writeDebug: Boolean = true or config.debug
     private val fileRecord = TaggedFileRecord.createRecord(config, testFile)
-    private var saveRoot: String = (config.debugPrefix ?: fileRecord.filename())!!
+    private var saveRoot: String = config.debugPrefix
 
 
     /**
@@ -48,7 +48,7 @@ class TestClassifier @Throws(IOException::class)
     @Throws(IOException::class)
     fun test() {
         var pf: PrintFile? = null
-        if (writeDebug) pf = PrintFile("$saveRoot-test.txt")
+        if (writeDebug) pf = PrintFile("$saveRoot/5_corenlp.csv")
 
         val verboseResults = config.verboseResults
 
@@ -75,7 +75,11 @@ class TestClassifier @Throws(IOException::class)
         }
 
         val tags = maxentTagger.tags.tagSet().sortedBy { maxentTagger.tags.getIndex(it) }.toTypedArray()
-        println("Complete Tagset: " + tags.joinToString())
+
+        val pf2 = PrintFile("$saveRoot/5_tags.csv")
+        pf2.println(tags.joinToString())
+        pf2.close()
+        println("Open Tags: " + maxentTagger.tags.openTags.joinToString())
 
         pf?.close()
     }
@@ -85,7 +89,7 @@ class TestClassifier @Throws(IOException::class)
 
         testS.writeTagsAndErrors(debugFile, verboseResults)
         testS.updateConfusionMatrix(confusionMatrix)
-        println(resultsString(maxentTagger))
+        //println(resultsString(maxentTagger))
 
         numWrong += testS.numWrong
         numRight += testS.numRight

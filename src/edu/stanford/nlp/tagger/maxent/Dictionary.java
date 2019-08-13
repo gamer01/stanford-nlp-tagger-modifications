@@ -33,7 +33,7 @@ public class Dictionary {
 
     private final Map<String, TagCount> dict = Generics.newHashMap();
     private final Map<Integer, CountWrapper> partTakingVerbs = Generics.newHashMap();
-    private static final String naWord = "NA";
+    private static final String naWord = Defaults.naTag;
     private static final boolean VERBOSE = false;
 
     public Dictionary() {

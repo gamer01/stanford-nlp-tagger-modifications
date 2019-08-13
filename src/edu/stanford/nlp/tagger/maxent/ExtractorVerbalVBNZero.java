@@ -23,7 +23,7 @@ public class ExtractorVerbalVBNZero extends DictionaryExtractor  {
   private static final String edSuff = "ed";
   private static final String enSuff = "en";
   private static final String oneSt = "1";
-  private static final String naWord = "NA";
+  private static final String naWord = Defaults.naTag;
 
   private final int bound;
   private static final Pattern stopper = Pattern.compile("(?i:and|or|but|,|;|-|--)");
@@ -62,7 +62,7 @@ public class ExtractorVerbalVBNZero extends DictionaryExtractor  {
 
     for (int index = -1; index >= -bound; index--) {
       String word2 = pH.getWord(h, index);
-      if ("NA".equals(word2)) {
+      if (Defaults.naTag.equals(word2)) {
         break;
       }
       if (stopper.matcher(word2).matches()) {

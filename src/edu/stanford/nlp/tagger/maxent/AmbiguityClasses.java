@@ -44,7 +44,7 @@ import edu.stanford.nlp.util.HashIndex;
 public class AmbiguityClasses {
 
   private final Index<AmbiguityClass> classes;
-  private static final String naWord = "NA";
+  private static final String naWord = Defaults.naTag;
 
   // TODO: this isn't used anywhere, either
   // protected final AmbiguityClass naClass = new AmbiguityClass(null, false, null, null);

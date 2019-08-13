@@ -534,7 +534,7 @@ public class ExtractorFramesRare {
  */
 class RareExtractor extends Extractor {
 
-  static final String naTag = "NA";
+  static final String naTag = Defaults.naTag;
 
   RareExtractor() {
     super();

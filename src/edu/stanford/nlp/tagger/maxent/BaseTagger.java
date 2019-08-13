@@ -57,10 +57,10 @@ public class BaseTagger implements SequenceModel {
      */
     protected static final Redwood.RedwoodChannels log = Redwood.channels(BaseTagger.class);
 
-    protected static final String naTag = "EMPTY";
+    protected static final String naTag = Defaults.naTag;
     private static final String[] naTagArr = {naTag};
     protected static final boolean DBG = false;
-    protected static final boolean doConstraintTagSet = false;
+    protected static final boolean doConstraintTagSet = true;
 
     protected final String tagSeparator;
     protected final String encoding;
