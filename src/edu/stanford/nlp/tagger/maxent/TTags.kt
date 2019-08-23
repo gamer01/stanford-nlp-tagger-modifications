@@ -141,7 +141,9 @@ class TTags// conjunctions
 
     private var index: Index<String>
     private val closed: MutableSet<String>
+
     private var _openTags: MutableSet<String>? = null
+
     val openTags: MutableSet<String>
         get() {
             val open = Generics.newHashSet<String>()
@@ -156,12 +158,11 @@ class TTags// conjunctions
             return _openTags!!
         }
     private val isEnglish: Boolean // for speed
-
-
     /** If true, then the open tags are fixed and we set closed tags based on
      * index-openTags; otherwise, we set open tags based on index-closedTags.
      */
     private var openFixed = false
+
 
     /** When making a decision based on the training data as to whether a
      * tag is closed, this is the threshold for how many tokens can be in
@@ -169,6 +170,7 @@ class TTags// conjunctions
      * TODO: make this an option you can set; need to pass in TaggerConfig object and then can say = config.getClosedTagThreshold());
      */
     private val closedTagThreshold: Int
+    private val doDeterministicTagExpansion: Boolean
     /** If true, when a model is trained, all tags that had fewer tokens than
      * closedTagThreshold will be considered closed.
      */
@@ -309,8 +311,36 @@ class TTags// conjunctions
      * @return A superset of tags
      */
     fun deterministicallyExpandTags(tags: Array<String>): Array<String> {
-        if (isEnglish && doDeterministicTagExpansion) {
+        if (doDeterministicTagExpansion) {
+            val andRules = mapOf(
+                    setOf("ADJA") to setOf("ADJD", "ADJV", "ADJS", "ADJA<VVPS", "ADJA<VVPP"),
 
+                    setOf("VVPS") to setOf("ADJA<VVPS"),
+                    setOf("DPOSD") to setOf("DPOSA"),
+
+                    setOf("APPR") to setOf("PAVAP", "PTKVZ")
+            )
+            val orRules = mapOf(
+                    setOf("VVINF", "VAINF", "VVFIN", "VVPP", "NA") to setOf("VVINF", "VAINF", "VVFIN", "VVPP", "NA"),
+                    setOf("VVFIN", "VVFIN.konj") to setOf("VVFIN", "VVFIN.konj"),
+                    setOf("VVINF", "VKFIN") to setOf("VVINF", "VKFIN"),
+
+                    setOf("VVPP", "ADJA<VVPS") to setOf("ADJA<VVPP")
+            )
+
+            val oldTags = tags.toSet()
+            val newTags = oldTags.toMutableSet()
+
+            andRules.forEach {
+                if (oldTags.containsAll(it.key))
+                    newTags.addAll(it.value)
+            }
+            orRules.forEach {
+                if (oldTags.intersect(it.key).isNotEmpty())
+                    newTags.addAll(it.value)
+            }
+
+            return newTags.toTypedArray()
         }
         return tags
     }
@@ -327,14 +357,11 @@ class TTags// conjunctions
         return s.toString()
     }
 
-    companion object {
-        private val doDeterministicTagExpansion = true
-    }
-
     init {
         this.index = HashIndex()
         this.closed = Generics.newHashSet<String>()
         this.closedTagThreshold = config.closedTagThreshold
+        this.doDeterministicTagExpansion = config.doDeterministicTagExpansion
         if (language.equals("english", ignoreCase = true)) {
             closed.add(".")
             closed.add(",")

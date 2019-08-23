@@ -26,11 +26,18 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
         for (pos in 0 until size - 1) {
             //word; sentenceID; isunknown; truelabel; label posterior; constrained tags;
             val word = sent[pos]
-            val data = arrayOf(word, n_sent.toString(), maxentTagger.dict.isUnknown(word).toString(),
-                    correctTags[pos], finalTags[pos],
+            val data = arrayOf(
+                    word,
+                    n_sent.toString(),
+                    maxentTagger.dict.isUnknown(word).toString(),
+                    correctTags[pos],
+                    finalTags[pos],
                     scoresOf(sequence, pos + leftWindow(), false).joinToString(prefix = "[", postfix = "]"),
-                    getPossibleTagsAsString(pos + leftWindow()).joinToString(prefix = "[", postfix = "]"))
-            pf.println(data.joinToString(separator = ";", transform= { "\"$it\"" }) )
+                    getPossibleTagsAsString(pos + leftWindow()).joinToString(prefix = "[", postfix = "]")
+            )
+            pf.println(data.joinToString(separator = ";", transform = { "\"$it\"" }))
+            //if (!getPossibleTagsAsString(pos + leftWindow()).contains(correctTags[pos]))
+            //    println("forced misclassification: ${finalTags[pos]}; ${getPossibleTagsAsString(pos + leftWindow()).joinToString(prefix = "[", postfix = "]")}")
         }
 
         n_sent++

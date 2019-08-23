@@ -56,6 +56,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
             ENCODING = "UTF-8",
             LEARN_CLOSED_CLASS = "false",
             CLOSED_CLASS_THRESHOLD = "40",
+            DO_DETERMINISTIC_TAG_EXPANSION = "false",
             VERBOSE = "false",
             VERBOSE_RESULTS = "true",
             SGML = "false",
@@ -82,6 +83,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         defaultValues.put("wordFunction", WORD_FUNCTION);
         defaultValues.put("closedClassTags", "");
         defaultValues.put("closedClassTagThreshold", CLOSED_CLASS_THRESHOLD);
+        defaultValues.put("doDeterministicTagExpansion", DO_DETERMINISTIC_TAG_EXPANSION);
         defaultValues.put("search", SEARCH);
         defaultValues.put(TAG_SEPARATOR_PROPERTY, TAG_SEPARATOR);
         defaultValues.put("tokenize", TOKENIZE);
@@ -228,6 +230,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         this.setProperty("learnClosedClassTags", props.getProperty("learnClosedClassTags", this.getProperty("learnClosedClassTags")));
 
         this.setProperty("closedClassTagThreshold", props.getProperty("closedClassTagThreshold", this.getProperty("closedClassTagThreshold")));
+        this.setProperty("doDeterministicTagExpansion", props.getProperty("doDeterministicTagExpansion", this.getProperty("doDeterministicTagExpansion")));
 
         this.setProperty("arch", props.getProperty("arch", this.getProperty("arch")));
         if (this.getMode() == Mode.TRAIN && this.getProperty("arch").isEmpty()) {
@@ -382,6 +385,10 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         return Integer.parseInt(getProperty("closedClassTagThreshold"));
     }
 
+    public boolean getDoDeterministicTagExpansion() {
+        return Boolean.parseBoolean(getProperty("doDeterministicTagExpansion"));
+    }
+
     public String getArch() {
         return getProperty("arch");
     }
@@ -517,6 +524,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
 
         pw.println("         closedClassTags = " + getProperty("closedClassTags"));
         pw.println(" closedClassTagThreshold = " + getProperty("closedClassTagThreshold"));
+        pw.println("doDeterministicTagExpansion = " + getProperty("doDeterministicTagExpansion"));
         pw.println(" curWordMinFeatureThresh = " + getProperty("curWordMinFeatureThresh"));
         pw.println("                   debug = " + getProperty("debug"));
         pw.println("             debugPrefix = " + getProperty("debugPrefix"));
@@ -736,6 +744,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         out.println("# Used only if learnClosedClassTags=true.  Tags that have fewer tokens than this threshold are");
         out.println("# considered closed in the trained model.");
         out.println("# closedClassTagThreshold = ");
+        out.println("# doDeterministicTagExpansion = ");
         out.println();
 
         out.println("# search method for optimization. Normally use the default 'qn'. choices: 'qn' (quasi-Newton),");
