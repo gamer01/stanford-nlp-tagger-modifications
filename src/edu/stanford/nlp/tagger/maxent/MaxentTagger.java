@@ -349,7 +349,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
      * Will return the index of a tag if known, -1 if not already known
      */
     public int getTagIndex(String tag) {
-        return tags.getIndex(tag);
+        return tags.indexOf(tag);
     }
 
     public int numTags() {
@@ -505,37 +505,35 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
         }
 
         if (openClassTags.length > 0) {
-            tags = new TTags();
+            tags = new TTags(config);
             tags.setOpenClassTags(openClassTags);
         } else if (closedClassTags.length > 0) {
-            tags = new TTags();
+            tags = new TTags(config);
             tags.setClosedClassTags(closedClassTags);
         } else {
-            tags = new TTags(lang);
+            tags = new TTags(config, lang);
         }
 
         defaultScore = lang.equals("english") ? 1.0 : 0.0;
 
-        if (config != null) {
-            rareWordThresh = config.getRareWordThresh();
-            minFeatureThresh = config.getMinFeatureThresh();
-            curWordMinFeatureThresh = config.getCurWordMinFeatureThresh();
-            rareWordMinFeatureThresh = config.getRareWordMinFeatureThresh();
-            veryCommonWordThresh = config.getVeryCommonWordThresh();
-            occurringTagsOnly = config.occurringTagsOnly();
-            possibleTagsOnly = config.possibleTagsOnly();
-            // log.info("occurringTagsOnly: "+occurringTagsOnly);
-            // log.info("possibleTagsOnly: "+possibleTagsOnly);
+        rareWordThresh = config.getRareWordThresh();
+        minFeatureThresh = config.getMinFeatureThresh();
+        curWordMinFeatureThresh = config.getCurWordMinFeatureThresh();
+        rareWordMinFeatureThresh = config.getRareWordMinFeatureThresh();
+        veryCommonWordThresh = config.getVeryCommonWordThresh();
+        occurringTagsOnly = config.occurringTagsOnly();
+        possibleTagsOnly = config.possibleTagsOnly();
+        // log.info("occurringTagsOnly: "+occurringTagsOnly);
+        // log.info("possibleTagsOnly: "+possibleTagsOnly);
 
-            defaultScore = config.getDefaultScore();
-        }
+        defaultScore = config.getDefaultScore();
 
         // just in case, reset the defaultScores array so it will be
         // recached later when needed.  can't initialize it now in case we
         // don't know ysize yet
         defaultScores = null;
 
-        if (config == null || config.getMode() == TaggerConfig.Mode.TRAIN) {
+        if (config.getMode() == TaggerConfig.Mode.TRAIN) {
             // initialize the extractors based on the arch variable
             // you only need to do this when training; otherwise they will be
             // restored from the serialized file
@@ -912,7 +910,7 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
                     }
                     fValueAssociations.put(fK.val, fTagAssociations);
                 }
-                fTagAssociations[tags.getIndex(fK.tag)] = numF;
+                fTagAssociations[tags.indexOf(fK.tag)] = numF;
             }
             if (VERBOSE) {
                 IOUtils.closeIgnoringExceptions(pfVP);
@@ -1629,47 +1627,6 @@ public class MaxentTagger extends Tagger implements ListProcessor<List<? extends
         printErrWordsPerSec(totalMillis, numWords);
     }
 
-    public void runTaggerSGML(BufferedReader reader, BufferedWriter writer, OutputStyle outputStyle)
-            throws IOException {
-        Timing t = new Timing();
-
-        //Counts
-        int numWords = 0;
-        int numSentences = 0;
-
-        if (outputStyle == OutputStyle.XML ||
-                outputStyle == OutputStyle.INLINE_XML) {
-            writer.write("<?xml version=\"1.0\" encoding=\"" +
-                    config.getEncoding() + "\"?>\n");
-            writer.write("<pos>\n");
-        }
-
-        // this uses NER codebase technology to read/write SGML-ish files
-        PlainTextDocumentReaderAndWriter<CoreLabel> readerAndWriter = new PlainTextDocumentReaderAndWriter<>();
-        ObjectBank<List<CoreLabel>> ob = new ObjectBank<>(new ReaderIteratorFactory(reader), readerAndWriter);
-        PrintWriter pw = new PrintWriter(writer);
-        for (List<CoreLabel> sentence : ob) {
-            List<CoreLabel> s = Generics.newArrayList();
-            numWords += s.size();
-            List<TaggedWord> taggedSentence = tagSentence(s, false);
-            Iterator<CoreLabel> origIter = sentence.iterator();
-            for (TaggedWord tw : taggedSentence) {
-                CoreLabel cl = origIter.next();
-                cl.set(CoreAnnotations.AnswerAnnotation.class, tw.tag());
-            }
-            readerAndWriter.printAnswers(sentence, pw, outputStyle, true);
-            ++numSentences;
-        }
-
-        if (outputStyle == OutputStyle.XML ||
-                outputStyle == OutputStyle.INLINE_XML) {
-            writer.write("</pos>\n");
-        }
-
-        writer.flush();
-        long millis = t.stop();
-        printErrWordsPerSec(millis, numWords);
-    }
 
     public <X extends HasWord> void runTagger(Iterable<List<X>> document,
                                               BufferedWriter writer,

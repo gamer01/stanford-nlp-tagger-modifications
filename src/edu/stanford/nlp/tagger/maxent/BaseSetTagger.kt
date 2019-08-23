@@ -20,7 +20,7 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
             return
 
         //write stuff to csv
-        val sequence = (List(leftWindow()) { naTag } + finalTags + List(rightWindow()) { naTag }).map { maxentTagger.tags.getIndex(it) }.toIntArray()
+        val sequence = (List(leftWindow()) { naTag } + finalTags + List(rightWindow()) { naTag }).map { maxentTagger.tags.indexOf(it) }.toIntArray()
 
         // skip end of sentence tag
         for (pos in 0 until size - 1) {
@@ -39,7 +39,7 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
     private fun deriveTagSets(setpredictor: (scores: DoubleArray, tags: Array<String>) -> Set<String> = ::genSingletons,
                               constraintTags: Boolean = true): List<Set<String>> {
         // fill left and right window with NA tags and convert tags to tagindices
-        val sequence = (List(leftWindow()) { naTag } + finalTags + List(rightWindow()) { naTag }).map { maxentTagger.tags.getIndex(it) }.toIntArray()
+        val sequence = (List(leftWindow()) { naTag } + finalTags + List(rightWindow()) { naTag }).map { maxentTagger.tags.indexOf(it) }.toIntArray()
 
 
         // skip end of sentence tag
@@ -52,7 +52,7 @@ class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
             } else {
                 // similar to above, but we do not constraint the scores.
                 val scores = scoresOf(sequence, pos + leftWindow(), false)
-                val tags = maxentTagger.tags.tagSet().sortedBy { maxentTagger.tags.getIndex(it) }.toTypedArray()
+                val tags = maxentTagger.tags.tagSet().sortedBy { maxentTagger.tags.indexOf(it) }.toTypedArray()
                 setpredictor(scores, tags)
             }
         }

@@ -176,7 +176,7 @@ public class TaggerExperiments extends Experiments  {
           continue;
         }
         int numEvidence = 0;
-        int y = maxentTagger.tags.getIndex(fK.tag);
+        int y = maxentTagger.tags.indexOf(fK.tag);
         for (int xValue : xValues) {
 
           if (maxentTagger.occurringTagsOnly) {
@@ -267,7 +267,7 @@ public class TaggerExperiments extends Experiments  {
             }
             fValueAssociations.put(fK.val, fTagAssociations);
           }
-          fTagAssociations[maxentTagger.tags.getIndex(fK.tag)] = numFeats;
+          fTagAssociations[maxentTagger.tags.indexOf(fK.tag)] = numFeats;
 
           numFeats++;
         }

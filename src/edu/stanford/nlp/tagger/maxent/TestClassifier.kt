@@ -74,7 +74,7 @@ class TestClassifier @Throws(IOException::class)
             }
         }
 
-        val tags = maxentTagger.tags.tagSet().sortedBy { maxentTagger.tags.getIndex(it) }.toTypedArray()
+        val tags = maxentTagger.tags.tagSet().sortedBy { maxentTagger.tags.indexOf(it) }.toTypedArray()
 
         val pf2 = PrintFile("$saveRoot/5_tags.csv")
         pf2.println(tags.joinToString())

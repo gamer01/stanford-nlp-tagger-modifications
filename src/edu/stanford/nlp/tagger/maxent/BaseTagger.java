@@ -282,7 +282,7 @@ public class BaseTagger implements SequenceModel {
         String[] tags = getPossibleTagsAsString(history.current - history.start + leftWindow());
         double[] histories = getAllScores();
         // now we pick out the single values for the specific tags.
-        return Stream.of(tags).map(tag -> histories[maxentTagger.tags.getIndex(tag)])
+        return Stream.of(tags).map(tag -> histories[maxentTagger.tags.indexOf(tag)])
                 .mapToDouble(d -> d).toArray();
     }
 
@@ -385,7 +385,7 @@ public class BaseTagger implements SequenceModel {
     @Override
     public int[] getPossibleValues(int pos) {
         return Stream.of(getPossibleTagsAsString(pos))
-                .map(tag -> maxentTagger.tags.getIndex(tag))
+                .map(tag -> maxentTagger.tags.indexOf(tag))
                 .mapToInt(x -> x).toArray();
     }
 
