@@ -16,7 +16,7 @@ import edu.stanford.nlp.math.ArrayMath;
 public class DiffFunctionTest extends TestCase {
 
   // private static final double EPS = 1e-6;
-  private static final Random r = new Random();
+  private static final Random r = new Random(7);
 
   private static double[] estimateGradient(Function f, double[] x, int[] testIndices, double eps) {
     double[] lowAnswer = new double[testIndices.length];

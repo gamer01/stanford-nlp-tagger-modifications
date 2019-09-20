@@ -6,11 +6,10 @@ import edu.stanford.nlp.tagger.common.Tagger
 import edu.stanford.nlp.util.Generics
 import edu.stanford.nlp.util.HashIndex
 import edu.stanford.nlp.util.Index
+import java.io.*
 
-import java.io.IOException
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.util.*
+import kotlin.streams.toList
 
 class TTags// conjunctions
 /**
@@ -174,6 +173,8 @@ class TTags// conjunctions
     /** If true, when a model is trained, all tags that had fewer tokens than
      * closedTagThreshold will be considered closed.
      */
+    private var expansionRules = listOf<Set<String>>()
+
     private var learnClosedTags = false
 
     val size: Int
@@ -312,36 +313,28 @@ class TTags// conjunctions
      */
     fun deterministicallyExpandTags(tags: Array<String>): Array<String> {
         if (doDeterministicTagExpansion) {
-            val andRules = mapOf(
-                    setOf("ADJA") to setOf("ADJD", "ADJV", "ADJS", "ADJA<VVPS", "ADJA<VVPP"),
-
-                    setOf("VVPS") to setOf("ADJA<VVPS"),
-                    setOf("DPOSD") to setOf("DPOSA"),
-
-                    setOf("APPR") to setOf("PAVAP", "PTKVZ")
-            )
-            val orRules = mapOf(
-                    setOf("VVINF", "VAINF", "VVFIN", "VVPP", "NA") to setOf("VVINF", "VAINF", "VVFIN", "VVPP", "NA"),
-                    setOf("VVFIN", "VVFIN.konj") to setOf("VVFIN", "VVFIN.konj"),
-                    setOf("VVINF", "VKFIN") to setOf("VVINF", "VKFIN"),
-
-                    setOf("VVPP", "ADJA<VVPS") to setOf("ADJA<VVPP")
-            )
-
             val oldTags = tags.toSet()
             val newTags = oldTags.toMutableSet()
 
-            andRules.forEach {
-                if (oldTags.containsAll(it.key))
-                    newTags.addAll(it.value)
-            }
-            orRules.forEach {
-                if (oldTags.intersect(it.key).isNotEmpty())
-                    newTags.addAll(it.value)
+            /*oldTags.forEach {
+                if (it.endsWith('*')) {
+                    // e.g. ('KO*' → 'KO*', 'KOKOM', 'KON', 'KOUS')
+                    val pattern = it.replace("*", ".+")
+                    newTags.addAll(tags.filter { it.toRegex().matches(pattern) })
+                } else {
+                    // e.g. ('VVPP' → 'VVPP', 'ADJA<VVPP')
+                    newTags.addAll(tags.filter { it.toRegex().matches("(.+<|)$it") })
+                }
+            }*/
+
+            expansionRules.forEach {
+                if (oldTags.intersect(it).isNotEmpty())
+                    newTags.addAll(it)
             }
 
             return newTags.toTypedArray()
         }
+
         return tags
     }
 
@@ -362,6 +355,17 @@ class TTags// conjunctions
         this.closed = Generics.newHashSet<String>()
         this.closedTagThreshold = config.closedTagThreshold
         this.doDeterministicTagExpansion = config.doDeterministicTagExpansion
+
+        if (this.doDeterministicTagExpansion) {
+            try {
+                this.expansionRules = File(config.tagExpansionRuleFile).bufferedReader().lines().map {
+                    it.split(',').map { it.strip() }.toSet()
+                }.toList()
+            } catch (e: FileNotFoundException) {
+                this.expansionRules = listOf()
+            }
+        }
+
         if (language.equals("english", ignoreCase = true)) {
             closed.add(".")
             closed.add(",")

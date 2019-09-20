@@ -41,7 +41,7 @@ public class StochasticDiffFunctionTester  {
 
     thisFunc = (AbstractStochasticCachingDiffFunction) function; // Make sure the function is Stochastic
 
-    generator = new Random(System.currentTimeMillis());  // used to generate random test vectors
+    generator = new Random(5);  // used to generate random test vectors
 
     //  Look for a good batchSize to test with by getting factors
     testBatchSize = (int) getTestBatchSize(thisFunc.dataDimension());

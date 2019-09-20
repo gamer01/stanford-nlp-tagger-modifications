@@ -417,7 +417,11 @@ public class BaseTagger implements SequenceModel {
             arr1 = maxentTagger.dict.getTags(word);
         }
         // we expand the tags
-        return maxentTagger.tags.deterministicallyExpandTags(arr1);
+        String[] tags = maxentTagger.tags.deterministicallyExpandTags(arr1);
+
+        // filter for tags that are known during training! otherwise we run in out of bounds exceptions
+        // ideally the filtering does not have an effect.
+        return Stream.of(tags).filter(tag -> -1 < maxentTagger.tags.indexOf(tag)).toArray(String[]::new);
     }
 
     @Override

@@ -1,8 +1,6 @@
 package edu.stanford.nlp.tagger.maxent
 
-import com.opencsv.CSVWriter
 import edu.stanford.nlp.io.PrintFile
-import java.io.FileWriter
 
 class BaseSetTagger(maxentTagger: MaxentTagger?) : BaseTagger(maxentTagger) {
     companion object {

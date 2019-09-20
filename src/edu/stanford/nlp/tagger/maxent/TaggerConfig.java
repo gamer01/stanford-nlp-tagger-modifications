@@ -245,6 +245,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         this.setProperty("tokenizerFactory", props.getProperty("tokenizerFactory", this.getProperty("tokenizerFactory")));
 
         this.setProperty("debugPrefix", props.getProperty("debugPrefix", this.getProperty("debugPrefix", "")));
+        this.setProperty("tagExpansionRuleFile", props.getProperty("tagExpansionRuleFile", this.getProperty("tagExpansionRuleFile", "")));
         this.setProperty("debug", props.getProperty("debug", DEBUG));
 
         this.setProperty(ENCODING_PROPERTY, props.getProperty(ENCODING_PROPERTY, this.getProperty(ENCODING_PROPERTY)));
@@ -404,6 +405,9 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
     public String getDebugPrefix() {
         return getProperty("debugPrefix");
     }
+    public String getTagExpansionRuleFile() {
+        return getProperty("tagExpansionRuleFile");
+    }
 
     public String getTokenizerFactory() {
         return getProperty("tokenizerFactory");
@@ -528,6 +532,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         pw.println(" curWordMinFeatureThresh = " + getProperty("curWordMinFeatureThresh"));
         pw.println("                   debug = " + getProperty("debug"));
         pw.println("             debugPrefix = " + getProperty("debugPrefix"));
+        pw.println("    tagExpansionRuleFile = " + getProperty("tagExpansionRuleFile"));
         pw.println("            " + TAG_SEPARATOR_PROPERTY + " = " +
                 getProperty(TAG_SEPARATOR_PROPERTY));
         pw.println("                " + ENCODING_PROPERTY + " = " +
@@ -682,6 +687,7 @@ public class TaggerConfig extends Properties /* Inherits implementation of Seria
         out.println("# Prefix for debugging output (if debug == true). Default is to use the");
         out.println("# filename from 'file'");
         out.println("# debugPrefix = ");
+        out.println("# tagExpansionRuleFile = ");
         out.println();
 
         out.println("######### parameters for training  #########");
